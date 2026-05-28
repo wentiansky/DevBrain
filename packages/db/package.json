@@ -1,21 +1,22 @@
 {
-  "name": "@devbrain/worker",
+  "name": "@devbrain/db",
   "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "scripts": {
-    "dev": "ts-node src/main.ts",
-    "build": "tsc",
-    "lint": "eslint \"src/**/*.ts\"",
-    "lint:fix": "eslint \"src/**/*.ts\" --fix",
-    "typecheck": "tsc --noEmit",
-    "test": "jest --passWithNoTests"
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev --create-only",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:test": "pnpm run db:test:integration",
+    "db:test:integration": "jest --runInBand --testRegex \".*\\.integration\\.test\\.ts$\"",
+    "test": "jest --passWithNoTests",
+    "lint": "eslint \"{src,prisma}/**/*.ts\"",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@devbrain/db": "workspace:*",
-    "@nestjs/common": "^11.1.0",
-    "@nestjs/core": "^11.1.0",
-    "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2",
-    "tslib": "^2.8.0"
+    "@prisma/client": "^6.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.27.0",
@@ -23,6 +24,7 @@
     "@types/node": "^22.0.0",
     "eslint": "^9.27.0",
     "jest": "^30.0.0",
+    "prisma": "^6.0.0",
     "ts-jest": "^29.3.0",
     "ts-node": "^10.9.0",
     "typescript": "^5.7.0",

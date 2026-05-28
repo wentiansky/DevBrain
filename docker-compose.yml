@@ -1,6 +1,9 @@
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    build:
+      context: ./infra/postgres
+      dockerfile: Dockerfile
+    image: ${REGISTRY:-}${IMAGE_PREFIX:-devbrain/}postgres:${IMAGE_TAG:-16}
     container_name: devbrain-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-devbrain}
@@ -38,7 +41,8 @@ services:
   migrate:
     image: ${REGISTRY:-}${IMAGE_PREFIX:-devbrain/}api:${IMAGE_TAG:-latest}
     container_name: devbrain-migrate
-    command: ['npx', 'prisma', 'migrate', 'deploy']
+    # TODO (Change 10)：Dockerfile 需从 workspace root 构建，确保 packages/db 在容器内可用
+    command: ['npx', 'prisma', 'migrate', 'deploy', '--schema=packages/db/prisma/schema.prisma']
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://devbrain:devbrain@postgres:5432/devbrain}
     depends_on:

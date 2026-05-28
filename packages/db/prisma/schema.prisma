@@ -1,0 +1,328 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SpaceType {
+  personal
+  team
+}
+
+enum MembershipRole {
+  owner
+  member
+}
+
+enum SourceType {
+  pdf
+  markdown
+  txt
+  docx
+}
+
+enum DocumentStatus {
+  uploaded
+  validating
+  queued
+  processing
+  ready
+  failed
+  deleted
+}
+
+enum MessageStatus {
+  completed
+  aborted
+  failed
+  deleted
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
+}
+
+enum Provider {
+  qwen
+  deepseek
+  claude
+  gpt
+}
+
+enum ComparisonStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+enum UserStatus {
+  active
+  disabled
+  pending
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String     @unique
+  passwordHash  String
+  status        UserStatus @default(active)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime @updatedAt
+
+  refreshTokenFamilies RefreshTokenFamily[]
+  memberships          Membership[]
+  ownedSpaces          Space[]           @relation("SpaceCreator")
+  documents            Document[]
+  knowledgeBases       KnowledgeBase[]   @relation("KBCreator")
+  conversations        Conversation[]
+  comparisonRuns       ComparisonRun[]
+  comparisonVotes      ComparisonVote[]
+}
+
+model RefreshTokenFamily {
+  id            String    @id @default(cuid())
+  userId        String
+  revokedAt     DateTime?
+  revokedReason String?
+  createdAt     DateTime  @default(now())
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokens  RefreshToken[]
+
+  @@index([userId])
+}
+
+model RefreshToken {
+  id            String    @id @default(cuid())
+  familyId      String
+  tokenHash     String
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  replacedById  String?
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  family      RefreshTokenFamily  @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  replacedBy  RefreshToken?       @relation("TokenReplacement", fields: [replacedById], references: [id])
+  replaces    RefreshToken[]      @relation("TokenReplacement")
+
+  @@index([tokenHash])
+  @@index([familyId])
+  @@index([expiresAt])
+}
+
+model Space {
+  id          String    @id @default(cuid())
+  type        SpaceType @default(personal)
+  name        String
+  description String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy      User            @relation("SpaceCreator", fields: [createdById], references: [id])
+  memberships    Membership[]
+  knowledgeBases KnowledgeBase[]
+
+  @@index([createdById])
+}
+
+model Membership {
+  id        String         @id @default(cuid())
+  userId    String
+  spaceId   String
+  role      MembershipRole @default(member)
+  createdAt DateTime       @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, spaceId])
+  @@index([spaceId])
+}
+
+model KnowledgeBase {
+  id          String    @id @default(cuid())
+  spaceId     String
+  name        String
+  description String?
+  createdById String
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  space         Space          @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  createdBy     User           @relation("KBCreator", fields: [createdById], references: [id])
+  documents     Document[]
+  chunks        Chunk[]
+  conversations Conversation[]
+
+  @@index([spaceId])
+  @@index([createdById])
+}
+
+model Document {
+  id           String         @id @default(cuid())
+  kbId         String
+  uploaderId   String
+  sourceType   SourceType
+  originalName String
+  objectKey    String
+  mimeType     String?
+  sizeBytes    Int?
+  status       DocumentStatus @default(uploaded)
+  errorCode    String?
+  errorMessage String?
+  deletedAt    DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  kb       KnowledgeBase @relation(fields: [kbId], references: [id], onDelete: Cascade)
+  uploader User          @relation(fields: [uploaderId], references: [id])
+  chunks   Chunk[]
+
+  @@index([kbId])
+  @@index([uploaderId])
+  @@index([status])
+}
+
+model Chunk {
+  id          String     @id @default(cuid())
+  documentId  String
+  kbId        String
+  sourceType  SourceType
+  content     String
+  contentHash String
+  tokenCount  Int        @default(0)
+  headingPath String[]
+  anchor      String?
+  page        Int?
+  bbox        Json?
+  embedding   Unsupported("vector(1024)")
+  ftsVector   Unsupported("tsvector")?
+  metadata    Json?
+  createdAt   DateTime   @default(now())
+
+  document Document          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  kb       KnowledgeBase     @relation(fields: [kbId], references: [id])
+  citations MessageCitation[]
+
+  @@index([kbId])
+  @@index([documentId])
+  @@index([contentHash])
+}
+
+model Conversation {
+  id          String    @id @default(cuid())
+  kbId        String
+  createdById String
+  title       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  kb             KnowledgeBase @relation(fields: [kbId], references: [id], onDelete: Cascade)
+  createdBy      User          @relation(fields: [createdById], references: [id])
+  messages       Message[]
+  comparisonRuns ComparisonRun[]
+
+  @@index([kbId])
+  @@index([createdById])
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String?
+  status         MessageStatus @default(completed)
+  provider       Provider?
+  model          String?
+  errorCode      String?
+  errorMessage   String?
+  deletedAt      DateTime?
+  createdAt      DateTime      @default(now())
+
+  conversation Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  citations    MessageCitation[]
+
+  @@index([conversationId])
+  @@index([status])
+}
+
+model MessageCitation {
+  id          String     @id @default(cuid())
+  messageId   String
+  chunkId     String
+  documentId  String
+  sourceType  SourceType
+  order       Int        @default(0)
+  score       Float
+  chunkText   String
+  headingPath String[]
+  anchor      String?
+  page        Int?
+  bbox        Json?
+  createdAt   DateTime   @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  chunk   Chunk   @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([chunkId])
+}
+
+model ComparisonRun {
+  id             String           @id @default(cuid())
+  createdById    String
+  conversationId String?
+  messageId      String?
+  status         ComparisonStatus @default(pending)
+  prompt         String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  createdBy     User              @relation(fields: [createdById], references: [id])
+  conversation  Conversation?      @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  results       ComparisonResult[]
+  votes         ComparisonVote[]
+
+  @@index([createdById])
+  @@index([status])
+}
+
+model ComparisonResult {
+  id        String   @id @default(cuid())
+  runId     String
+  provider  Provider
+  model     String
+  content   String
+  score     Float?
+  createdAt DateTime @default(now())
+
+  run   ComparisonRun   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  votes ComparisonVote[]
+
+  @@index([runId])
+}
+
+model ComparisonVote {
+  id       String   @id @default(cuid())
+  userId   String
+  runId    String
+  resultId String
+  vote     String
+  createdAt DateTime @default(now())
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  run    ComparisonRun   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  result ComparisonResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, runId])
+  @@index([runId])
+}
