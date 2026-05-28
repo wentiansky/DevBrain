@@ -1,0 +1,36 @@
+# 私有笔记 —— 讨论日志
+.private/
+
+# 规划文档 —— 不提交到仓库
+docs/planning/
+
+# AI 助手配置 —— 不提交到仓库
+AGENTS.md
+CLAUDE.md
+
+# OpenSpec 工作区 —— 规范、变更提案、已归档变更
+openspec/
+.claude/
+.codex/
+
+# Node / Next / Nest 排除项
+node_modules/
+.pnp.*
+.next/
+dist/
+build/
+coverage/
+*.log
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+
+# 环境变量文件 —— 仅 .env.example 被追踪
+.env
+.env.*
+!.env.example
+
+# 编辑器 / 操作系统
+.idea/
+.vscode/
+*.swp

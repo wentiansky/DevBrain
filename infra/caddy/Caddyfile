@@ -1,0 +1,8 @@
+# Caddyfile 占位
+# TODO (Change 11)：配置生产域名 HTTPS、web/api 代理路由及 streaming endpoint flush_interval -1
+
+:80 {
+  # 开发环境代理
+  reverse_proxy /api/* api:3001
+  reverse_proxy /* web:3000
+}
