@@ -1,0 +1,3 @@
+# TODO (Change 10)：调整 cron 调度表达式
+# 当前占位：每日 UTC 03:00（北京时间 11:00）
+0 3 * * * /bin/sh /backup.sh >> /var/log/backup.log 2>&1
