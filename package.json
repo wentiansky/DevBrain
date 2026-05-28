@@ -13,17 +13,18 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css,yaml,yml}\" --ignore-path .gitignore",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css,yaml,yml}\" --ignore-path .gitignore"
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css,yaml,yml}\" --ignore-path .gitignore",
+    "gen:openapi": "pnpm --filter @devbrain/api gen:openapi",
+    "gen:client": "pnpm --filter @devbrain/api gen:client"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "@nestjs/core",
+      "argon2",
+      "prisma",
       "@prisma/client",
       "@prisma/engines",
-      "esbuild",
-      "prisma",
-      "sharp",
-      "unrs-resolver"
+      "@nestjs/core",
+      "esbuild"
     ]
   },
   "devDependencies": {
