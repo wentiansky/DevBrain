@@ -1,5 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import type { User } from '@devbrain/db';
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type _DbTypeSmoke = User;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

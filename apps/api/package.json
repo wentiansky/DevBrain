@@ -13,6 +13,7 @@
     "test:cov": "jest --coverage"
   },
   "dependencies": {
+    "@devbrain/db": "workspace:*",
     "@nestjs/common": "^11.1.0",
     "@nestjs/core": "^11.1.0",
     "@nestjs/platform-express": "^11.1.0",
@@ -43,6 +44,7 @@
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
+    "watchman": false,
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
