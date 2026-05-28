@@ -25,6 +25,11 @@ coverage/
 next-env.d.ts
 .DS_Store
 
+# scripts 目录构建产物
+apps/api/scripts/*.js
+apps/api/scripts/*.js.map
+apps/api/scripts/*.d.ts
+
 # 环境变量文件 —— 仅 .env.example 被追踪
 .env
 .env.*

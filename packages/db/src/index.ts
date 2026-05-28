@@ -10,6 +10,8 @@ export type {
   Conversation,
   Message,
   MessageCitation,
+  RefreshTokenFamily,
+  RefreshToken,
 } from '@prisma/client';
 export { PrismaClient };
 

@@ -21,5 +21,6 @@
     "paths": {
       "@/*": ["src/*"]
     }
-  }
+  },
+  "exclude": ["scripts", "dist", "node_modules", "client", "openapi-ts.config.ts"]
 }
