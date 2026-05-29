@@ -212,11 +212,11 @@ docker compose config
 
 ### P0
 
-- [ ] 注册/登录。
-- [ ] 空状态。
-- [ ] 创建个人 KB。
-- [ ] 上传 Markdown。
-- [ ] worker ready。
+- [x] 注册/登录。
+- [x] 空状态。
+- [x] 创建个人 KB。
+- [x] 上传 Markdown。
+- [x] worker ready。
 - [ ] 真实的检索/生成。
 - [ ] Chat streaming。
 - [ ] 文本 citation 定位。
