@@ -170,6 +170,5 @@ export async function initializeAuth(): Promise<void> {
 export function logout(): void {
   authLogout().finally(() => {
     useAuthStore.getState().clearAuth();
-    window.location.href = '/login';
   });
 }
