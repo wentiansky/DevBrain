@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
   UseInterceptors,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,6 +15,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { DocumentsService } from './documents.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -23,6 +25,7 @@ import {
   CreateDocumentDto,
   DocumentResponse,
   DocumentListResponse,
+  ChunkListResponse,
 } from './dto/document.dto';
 import type { User } from '@devbrain/db';
 
@@ -87,5 +90,32 @@ export class DocumentsController {
   ): Promise<DocumentListResponse> {
     const items = await this.documentsService.listByKb(user, kbId);
     return { items };
+  }
+
+  @Get('documents/:id/chunks')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '查询 Document 的 chunks' })
+  @ApiParam({ name: 'id', description: 'Document ID' })
+  @ApiQuery({ name: 'limit', required: false, description: '每页数量，默认 100，最大 500' })
+  @ApiQuery({ name: 'cursor', required: false, description: '分页 cursor' })
+  @ApiResponse({
+    status: 200,
+    description: 'Chunk 列表',
+    type: ChunkListResponse,
+  })
+  @ApiResponse({ status: 401, description: '未认证' })
+  @ApiResponse({ status: 404, description: 'Document 不存在或无权访问' })
+  async getChunks(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
+  ): Promise<ChunkListResponse> {
+    return this.documentsService.getChunks(
+      user,
+      id,
+      limit ? parseInt(limit, 10) : 100,
+      cursor,
+    );
   }
 }

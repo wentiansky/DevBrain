@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { getPrismaClient, DOCUMENT_PROCESSING_JOB } from '@devbrain/db';
 import type { Document, User, DocumentJobPayload, ObjectStorage } from '@devbrain/db';
-import { CreateDocumentDto, DocumentResponse } from './dto/document.dto';
+import { CreateDocumentDto, DocumentResponse, ChunkListResponse } from './dto/document.dto';
 import { OBJECT_STORAGE } from '../storage/storage.module';
 import { verifySignatureToken } from '../storage/signature';
 import { KnowledgeBaseService } from '../kbs/knowledge-base.service';
@@ -27,6 +27,33 @@ function toResponse(doc: Document): DocumentResponse {
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
+}
+
+interface CursorPayload {
+  o: number;
+  t: string;
+  i: string;
+}
+
+function encodeCursor(ordinal: number, createdAt: Date, id: string): string {
+  const payload: CursorPayload = { o: ordinal, t: createdAt.toISOString(), i: id };
+  return Buffer.from(JSON.stringify(payload)).toString('base64url');
+}
+
+function decodeCursor(cursor: string): CursorPayload | null {
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+    if (
+      typeof parsed?.o === 'number' &&
+      typeof parsed?.t === 'string' &&
+      typeof parsed?.i === 'string'
+    ) {
+      return parsed as CursorPayload;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 @Injectable()
@@ -129,5 +156,112 @@ export class DocumentsService {
     );
 
     return toResponse(doc);
+  }
+
+  async getChunks(
+    user: User,
+    documentId: string,
+    limit: number = 100,
+    cursor?: string,
+  ): Promise<ChunkListResponse> {
+    const safeLimit = Number.isFinite(limit) ? limit : 100;
+    const effectiveLimit = Math.min(Math.max(1, safeLimit), 500);
+
+    const doc = await prisma.document.findUnique({
+      where: { id: documentId },
+    });
+
+    if (!doc || doc.deletedAt) {
+      throw new NotFoundException('Document 不存在或无权访问');
+    }
+
+    await this.knowledgeBaseService.getAccessiblePersonalKbOrThrow(
+      user.id,
+      doc.kbId,
+    );
+
+    let cursorOrdinal: number | null = null;
+    let cursorCreatedAt: Date | null = null;
+    let cursorId: string | null = null;
+    if (cursor) {
+      const decoded = decodeCursor(cursor);
+      if (decoded) {
+        cursorOrdinal = decoded.o;
+        cursorCreatedAt = new Date(decoded.t);
+        cursorId = decoded.i;
+      }
+    }
+
+    const hasCursor = cursorOrdinal !== null && cursorCreatedAt !== null && cursorId !== null;
+    const cursorFilter = hasCursor
+      ? `AND (COALESCE((c."metadata"->>'ordinal')::int, 2147483647), c."createdAt", c.id) > ($3::int, $4::timestamptz, $5::text)`
+      : '';
+
+    const params: unknown[] = [documentId, effectiveLimit + 1];
+    if (hasCursor) {
+      params.push(cursorOrdinal, cursorCreatedAt, cursorId);
+    }
+
+    const rows = await prisma.$queryRawUnsafe<
+      Array<{
+        id: string;
+        documentId: string;
+        kbId: string;
+        sourceType: string;
+        content: string;
+        headingPath: string[];
+        anchor: string;
+        tokenCount: number;
+        metadata: Record<string, unknown>;
+        createdAt: Date;
+      }>
+    >(
+      `SELECT
+        c.id,
+        c."documentId",
+        c."kbId",
+        c."sourceType",
+        c."content",
+        c."headingPath",
+        c."anchor",
+        c."tokenCount",
+        c."metadata",
+        c."createdAt",
+        COALESCE((c."metadata"->>'ordinal')::int, 2147483647) AS "_ordinal"
+      FROM "Chunk" c
+      WHERE c."documentId" = $1 ${cursorFilter}
+      ORDER BY
+        "_ordinal" ASC,
+        c."createdAt" ASC,
+        c.id ASC
+      LIMIT $2`,
+      ...params,
+    );
+
+    const hasMore = rows.length > effectiveLimit;
+    const items = rows.slice(0, effectiveLimit);
+    const nextCursor = hasMore && items.length > 0
+      ? encodeCursor(
+          Number((items[items.length - 1] as Record<string, unknown>)._ordinal) || 0,
+          (items[items.length - 1].createdAt as Date),
+          items[items.length - 1].id,
+        )
+      : null;
+
+    return {
+      items: items.map((r) => ({
+        id: r.id,
+        documentId: r.documentId,
+        kbId: r.kbId,
+        sourceType: r.sourceType,
+        content: r.content,
+        headingPath: r.headingPath ?? [],
+        anchor: r.anchor ?? '',
+        tokenCount: r.tokenCount,
+        metadata: r.metadata ?? {},
+        createdAt: r.createdAt,
+      })),
+      nextCursor,
+    };
   }
 }

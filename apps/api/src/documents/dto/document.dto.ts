@@ -72,10 +72,10 @@ export class DocumentResponse {
   @ApiProperty({ description: '处理状态' })
   status!: string;
 
-  @ApiPropertyOptional({ description: '错误码' })
+  @ApiPropertyOptional({ description: '错误码', type: String, nullable: true })
   errorCode?: string | null;
 
-  @ApiPropertyOptional({ description: '错误信息' })
+  @ApiPropertyOptional({ description: '错误信息', type: String, nullable: true })
   errorMessage?: string | null;
 
   @ApiProperty({ description: '创建时间' })
@@ -105,4 +105,44 @@ export class PresignUploadResponse {
 
   @ApiProperty({ description: '创建 Document 所需 token' })
   uploadToken!: string;
+}
+
+export class ChunkResponse {
+  @ApiProperty({ description: 'Chunk ID' })
+  id!: string;
+
+  @ApiProperty({ description: '所属 Document ID' })
+  documentId!: string;
+
+  @ApiProperty({ description: '所属 KB ID' })
+  kbId!: string;
+
+  @ApiProperty({ description: '来源类型' })
+  sourceType!: string;
+
+  @ApiProperty({ description: '文本内容' })
+  content!: string;
+
+  @ApiProperty({ description: '标题路径' })
+  headingPath!: string[];
+
+  @ApiProperty({ description: '定位锚点' })
+  anchor!: string;
+
+  @ApiProperty({ description: 'token 数量' })
+  tokenCount!: number;
+
+  @ApiProperty({ description: '元数据' })
+  metadata!: Record<string, unknown>;
+
+  @ApiProperty({ description: '创建时间' })
+  createdAt!: Date;
+}
+
+export class ChunkListResponse {
+  @ApiProperty({ description: 'Chunk 列表', type: [ChunkResponse] })
+  items!: ChunkResponse[];
+
+  @ApiPropertyOptional({ description: '下一页 cursor', type: String, nullable: true })
+  nextCursor?: string | null;
 }

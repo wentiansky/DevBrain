@@ -7,21 +7,29 @@
     "lint": "eslint \"src/**/*.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" --fix",
     "typecheck": "tsc --noEmit",
-    "test": "jest --passWithNoTests"
+    "test": "jest --passWithNoTests",
+    "smoke:embedding:dashscope": "npx ts-node scripts/smoke-dashscope-embedding.ts"
   },
   "dependencies": {
     "@devbrain/db": "workspace:*",
     "@nestjs/common": "^11.1.0",
     "@nestjs/core": "^11.1.0",
+    "@types/mdast": "^4.0.4",
     "bullmq": "^5.77.6",
     "dotenv": "^16.6.1",
     "ioredis": "^5.11.0",
+    "mdast-util-to-string": "^4.0.0",
     "reflect-metadata": "^0.2.2",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
     "rxjs": "^7.8.2",
-    "tslib": "^2.8.0"
+    "tslib": "^2.8.0",
+    "unified": "^11.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.27.0",
+    "@swc/core": "^1.15.40",
+    "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.0.0",
     "eslint": "^9.27.0",
@@ -42,6 +50,12 @@
     "watchman": false,
     "transform": {
       "^.+\\.ts$": "ts-jest"
+    },
+    "moduleNameMapper": {
+      "^unified$": "<rootDir>/ingestion/__mocks__/unified.ts",
+      "^remark-parse$": "<rootDir>/ingestion/__mocks__/remark-parse.ts",
+      "^remark-gfm$": "<rootDir>/ingestion/__mocks__/remark-gfm.ts",
+      "^mdast-util-to-string$": "<rootDir>/ingestion/__mocks__/mdast-util-to-string.ts"
     },
     "testEnvironment": "node"
   }

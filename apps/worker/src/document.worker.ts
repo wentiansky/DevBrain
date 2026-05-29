@@ -5,12 +5,13 @@ import {
   DOCUMENT_PROCESSING_QUEUE,
   isDocumentJobPayload,
   DocumentErrorCodes,
-  ErrorMessages,
 } from '@devbrain/db';
 import type { DocumentJobPayload } from '@devbrain/db';
 import { DocumentProcessorService } from './processor.service';
 
 const prisma = getPrismaClient();
+
+const TERMINAL_STATUSES = ['ready', 'failed', 'deleted'] as const;
 
 @Injectable()
 export class DocumentWorker implements OnModuleDestroy {
@@ -43,8 +44,13 @@ export class DocumentWorker implements OnModuleDestroy {
           return;
         }
 
-        if (doc.status === 'ready' || doc.status === 'failed') {
+        if ((TERMINAL_STATUSES as readonly string[]).includes(doc.status)) {
           console.warn(`Document ${payload.documentId} 已处于终态 ${doc.status}，跳过处理`);
+          return;
+        }
+
+        if (doc.sourceType !== 'markdown') {
+          console.warn(`Document ${payload.documentId} sourceType=${doc.sourceType}，跳过 Markdown ingestion`);
           return;
         }
 
@@ -61,15 +67,10 @@ export class DocumentWorker implements OnModuleDestroy {
             (err as Error).stack,
           );
           try {
-            await prisma.document.update({
-              where: { id: payload.documentId },
-              data: {
-                status: 'failed',
-                errorCode: DocumentErrorCodes.WORKER_UNEXPECTED_ERROR,
-                errorMessage:
-                  ErrorMessages[DocumentErrorCodes.WORKER_UNEXPECTED_ERROR],
-              },
-            });
+            await this.processor.failDocument(
+              payload.documentId,
+              DocumentErrorCodes.WORKER_UNEXPECTED_ERROR,
+            );
           } catch (dbErr) {
             console.error(`更新失败状态异常: ${(dbErr as Error).message}`);
           }
