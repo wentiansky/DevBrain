@@ -56,6 +56,47 @@ export type LoginDto = {
     password: string;
 };
 
+export type CreateKbDto = {
+    /**
+     * KB 名称（1-200 个字符）
+     */
+    name: string;
+    /**
+     * KB 描述（最多 500 个字符）
+     */
+    description?: string;
+};
+
+export type KbResponse = {
+    /**
+     * KB ID
+     */
+    id: string;
+    /**
+     * KB 名称
+     */
+    name: string;
+    /**
+     * KB 描述
+     */
+    description?: string;
+    /**
+     * 创建时间
+     */
+    createdAt: string;
+    /**
+     * 更新时间
+     */
+    updatedAt: string;
+};
+
+export type KbListResponse = {
+    /**
+     * KB 列表
+     */
+    items: Array<KbResponse>;
+};
+
 export type HealthControllerCheckData = {
     body?: never;
     path?: never;
@@ -195,3 +236,85 @@ export type AuthControllerMeResponses = {
 };
 
 export type AuthControllerMeResponse = AuthControllerMeResponses[keyof AuthControllerMeResponses];
+
+export type KnowledgeBaseControllerListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/kbs';
+};
+
+export type KnowledgeBaseControllerListErrors = {
+    /**
+     * 未认证
+     */
+    401: unknown;
+};
+
+export type KnowledgeBaseControllerListResponses = {
+    /**
+     * 个人 KB 列表（按 updatedAt desc, id desc 排序）
+     */
+    200: KbListResponse;
+};
+
+export type KnowledgeBaseControllerListResponse = KnowledgeBaseControllerListResponses[keyof KnowledgeBaseControllerListResponses];
+
+export type KnowledgeBaseControllerCreateData = {
+    body: CreateKbDto;
+    path?: never;
+    query?: never;
+    url: '/kbs';
+};
+
+export type KnowledgeBaseControllerCreateErrors = {
+    /**
+     * 输入校验失败（含传入 spaceId 被拒绝的场景）
+     */
+    400: unknown;
+    /**
+     * 未认证
+     */
+    401: unknown;
+};
+
+export type KnowledgeBaseControllerCreateResponses = {
+    /**
+     * KB 创建成功
+     */
+    201: KbResponse;
+};
+
+export type KnowledgeBaseControllerCreateResponse = KnowledgeBaseControllerCreateResponses[keyof KnowledgeBaseControllerCreateResponses];
+
+export type KnowledgeBaseControllerDetailData = {
+    body?: never;
+    path: {
+        /**
+         * KB ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/kbs/{id}';
+};
+
+export type KnowledgeBaseControllerDetailErrors = {
+    /**
+     * 未认证
+     */
+    401: unknown;
+    /**
+     * KB 不存在或无权访问
+     */
+    404: unknown;
+};
+
+export type KnowledgeBaseControllerDetailResponses = {
+    /**
+     * KB 详情
+     */
+    200: KbResponse;
+};
+
+export type KnowledgeBaseControllerDetailResponse = KnowledgeBaseControllerDetailResponses[keyof KnowledgeBaseControllerDetailResponses];

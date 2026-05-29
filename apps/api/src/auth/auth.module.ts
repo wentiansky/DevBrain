@@ -6,10 +6,12 @@ import { AuthConfigService } from './auth-config.service';
 import { PasswordHasherService } from './password-hasher.service';
 import { TokenService } from './token.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { SpacesModule } from '../spaces/spaces.module';
 
 @Module({
   imports: [
     JwtModule.register({}),
+    SpacesModule,
   ],
   controllers: [AuthController],
   providers: [

@@ -14,6 +14,7 @@ import { TokenService } from './token.service';
 import { AuthConfigService } from './auth-config.service';
 import { RegisterDto, LoginDto, AuthResponse, AuthUserResponse } from './dto/auth.dto';
 import { MemoryRateLimiter } from '../common/rate-limit/memory-rate-limiter.adapter';
+import { PersonalSpaceService } from '../spaces/personal-space.service';
 
 const prisma = getPrismaClient();
 
@@ -42,6 +43,7 @@ export class AuthService {
     private readonly passwordHasher: PasswordHasherService,
     private readonly tokenService: TokenService,
     private readonly authConfig: AuthConfigService,
+    private readonly personalSpaceService: PersonalSpaceService,
   ) {}
 
   async register(dto: RegisterDto, req: Request, res: Response): Promise<void> {
@@ -71,6 +73,11 @@ export class AuthService {
           status: 'active',
         },
       });
+
+      await this.personalSpaceService.createPersonalSpaceInTx(
+        tx,
+        created.id,
+      );
 
       const { opaqueRefreshToken, tokenHash, accessToken } =
         this.tokenService.generateRefreshTokenWithUser({

@@ -13,6 +13,7 @@ export type {
   RefreshTokenFamily,
   RefreshToken,
 } from '@prisma/client';
+export type { Prisma } from '@prisma/client';
 export { PrismaClient };
 
 let prisma: PrismaClient;
