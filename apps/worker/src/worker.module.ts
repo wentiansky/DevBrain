@@ -2,8 +2,7 @@ import { Module } from '@nestjs/common';
 import { DocumentWorker } from './document.worker';
 import { DocumentProcessorService } from './processor.service';
 import { LocalStorageAdapter } from './storage/local-storage.adapter';
-
-export const OBJECT_STORAGE = 'OBJECT_STORAGE';
+import { OBJECT_STORAGE } from './constants';
 
 @Module({
   providers: [

@@ -5,7 +5,7 @@ import {
   ErrorMessages,
 } from '@devbrain/db';
 import type { DocumentJobPayload, ObjectStorage } from '@devbrain/db';
-import { OBJECT_STORAGE } from './worker.module';
+import { OBJECT_STORAGE } from './constants';
 
 const prisma = getPrismaClient();
 

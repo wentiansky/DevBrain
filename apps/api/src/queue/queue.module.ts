@@ -4,10 +4,11 @@ import {
   DOCUMENT_PROCESSING_QUEUE,
 } from '@devbrain/db';
 
-function createQueue(): Queue {
+function createQueue(): Queue | null {
   const redisUrl = process.env.REDIS_URL;
   if (!redisUrl) {
-    throw new Error('REDIS_URL 未配置，BullMQ 队列为必需依赖，应用无法启动');
+    console.warn('REDIS_URL 未配置，Queue 将以 null 注入，文档处理相关功能不可用');
+    return null;
   }
   return new Queue(DOCUMENT_PROCESSING_QUEUE, {
     connection: { url: redisUrl },

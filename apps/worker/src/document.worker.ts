@@ -21,8 +21,7 @@ export class DocumentWorker implements OnModuleDestroy {
   ) {
     const redisUrl = process.env.REDIS_URL;
     if (!redisUrl) {
-      console.error('REDIS_URL 未配置，Worker 无法启动');
-      return;
+      throw new Error('REDIS_URL 未配置，Worker 无法启动');
     }
 
     this.worker = new Worker(
