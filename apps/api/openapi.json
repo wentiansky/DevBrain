@@ -469,6 +469,67 @@
           "Documents"
         ]
       }
+    },
+    "/documents/{id}/chunks": {
+      "get": {
+        "operationId": "DocumentsController_getChunks",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Document ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "每页数量，默认 100，最大 500",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "分页 cursor",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chunk 列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChunkListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未认证"
+          },
+          "404": {
+            "description": "Document 不存在或无权访问"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询 Document 的 chunks",
+        "tags": [
+          "Documents"
+        ]
+      }
     }
   },
   "info": {
@@ -771,12 +832,14 @@
             "description": "处理状态"
           },
           "errorCode": {
-            "type": "object",
-            "description": "错误码"
+            "type": "string",
+            "description": "错误码",
+            "nullable": true
           },
           "errorMessage": {
-            "type": "object",
-            "description": "错误信息"
+            "type": "string",
+            "description": "错误信息",
+            "nullable": true
           },
           "createdAt": {
             "format": "date-time",
@@ -808,6 +871,87 @@
             "items": {
               "$ref": "#/components/schemas/DocumentResponse"
             }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ChunkResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Chunk ID"
+          },
+          "documentId": {
+            "type": "string",
+            "description": "所属 Document ID"
+          },
+          "kbId": {
+            "type": "string",
+            "description": "所属 KB ID"
+          },
+          "sourceType": {
+            "type": "string",
+            "description": "来源类型"
+          },
+          "content": {
+            "type": "string",
+            "description": "文本内容"
+          },
+          "headingPath": {
+            "description": "标题路径",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "anchor": {
+            "type": "string",
+            "description": "定位锚点"
+          },
+          "tokenCount": {
+            "type": "number",
+            "description": "token 数量"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "元数据"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "创建时间"
+          }
+        },
+        "required": [
+          "id",
+          "documentId",
+          "kbId",
+          "sourceType",
+          "content",
+          "headingPath",
+          "anchor",
+          "tokenCount",
+          "metadata",
+          "createdAt"
+        ]
+      },
+      "ChunkListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Chunk 列表",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChunkResponse"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "下一页 cursor",
+            "nullable": true
           }
         },
         "required": [

@@ -1,6 +1,18 @@
 import { validateMarkdownBuffer } from './processor.service';
 import { DocumentErrorCodes } from '@devbrain/db';
 
+jest.mock('./ingestion', () => ({
+  parseMarkdown: jest.fn(() => [{ type: 'paragraph', text: 'mocked', headingPath: [] }]),
+  splitBlocks: jest.fn(() => [
+    { content: 'mocked', headingPath: [], blockTypes: ['paragraph'], tokenCount: 10, ordinal: 0, rawText: 'mocked' },
+  ]),
+  computeContentHash: jest.fn(() => 'abc123'),
+  CONTENT_HASH_VERSION: 1,
+  generateAnchor: jest.fn(() => 'h/root/c0-abc123'),
+  ChunkRepository: jest.fn(() => ({ replaceDocumentChunks: jest.fn() })),
+  EmbeddingProviderError: class extends Error { constructor(public errorCode: string, msg: string) { super(msg); } },
+}));
+
 describe('validateMarkdownBuffer', () => {
   it('合法 Markdown 返回 null', () => {
     const buf = Buffer.from('# Hello\n\nThis is **bold** text.\n', 'utf-8');

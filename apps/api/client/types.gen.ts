@@ -212,6 +212,62 @@ export type DocumentListResponse = {
     items: Array<DocumentResponse>;
 };
 
+export type ChunkResponse = {
+    /**
+     * Chunk ID
+     */
+    id: string;
+    /**
+     * 所属 Document ID
+     */
+    documentId: string;
+    /**
+     * 所属 KB ID
+     */
+    kbId: string;
+    /**
+     * 来源类型
+     */
+    sourceType: string;
+    /**
+     * 文本内容
+     */
+    content: string;
+    /**
+     * 标题路径
+     */
+    headingPath: Array<string>;
+    /**
+     * 定位锚点
+     */
+    anchor: string;
+    /**
+     * token 数量
+     */
+    tokenCount: number;
+    /**
+     * 元数据
+     */
+    metadata: {
+        [key: string]: unknown;
+    };
+    /**
+     * 创建时间
+     */
+    createdAt: string;
+};
+
+export type ChunkListResponse = {
+    /**
+     * Chunk 列表
+     */
+    items: Array<ChunkResponse>;
+    /**
+     * 下一页 cursor
+     */
+    nextCursor?: string | null;
+};
+
 export type HealthControllerCheckData = {
     body?: never;
     path?: never;
@@ -559,3 +615,44 @@ export type DocumentsControllerListByKbResponses = {
 };
 
 export type DocumentsControllerListByKbResponse = DocumentsControllerListByKbResponses[keyof DocumentsControllerListByKbResponses];
+
+export type DocumentsControllerGetChunksData = {
+    body?: never;
+    path: {
+        /**
+         * Document ID
+         */
+        id: string;
+    };
+    query?: {
+        /**
+         * 每页数量，默认 100，最大 500
+         */
+        limit?: string;
+        /**
+         * 分页 cursor
+         */
+        cursor?: string;
+    };
+    url: '/documents/{id}/chunks';
+};
+
+export type DocumentsControllerGetChunksErrors = {
+    /**
+     * 未认证
+     */
+    401: unknown;
+    /**
+     * Document 不存在或无权访问
+     */
+    404: unknown;
+};
+
+export type DocumentsControllerGetChunksResponses = {
+    /**
+     * Chunk 列表
+     */
+    200: ChunkListResponse;
+};
+
+export type DocumentsControllerGetChunksResponse = DocumentsControllerGetChunksResponses[keyof DocumentsControllerGetChunksResponses];
