@@ -7,7 +7,7 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "pnpm --parallel -r dev",
+    "dev": "pnpm --filter @devbrain/db build && pnpm --parallel --filter @devbrain/db --filter @devbrain/api --filter @devbrain/web --filter @devbrain/worker dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",

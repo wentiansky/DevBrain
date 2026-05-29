@@ -22,7 +22,7 @@ export class HealthController {
 @Controller('readyz')
 export class ReadyzController {
   constructor(
-    @Inject(QUEUE_TOKEN) private readonly queue: Queue,
+    @Inject(QUEUE_TOKEN) private readonly queue: Queue | null,
   ) {}
 
   @Get()

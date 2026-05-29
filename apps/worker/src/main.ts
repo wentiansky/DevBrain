@@ -1,3 +1,7 @@
+import { config } from 'dotenv';
+import * as path from 'node:path';
+config({ path: path.resolve(__dirname, '../../../.env') });
+
 import { NestFactory } from '@nestjs/core';
 import { WorkerModule } from './worker.module';
 

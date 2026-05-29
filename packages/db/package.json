@@ -1,9 +1,11 @@
 {
   "name": "@devbrain/db",
   "private": true,
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
+    "dev": "tsc -w",
+    "build": "tsc",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev --create-only",
     "db:migrate:deploy": "prisma migrate deploy",

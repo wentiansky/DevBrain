@@ -34,7 +34,7 @@ export class DocumentsService {
   constructor(
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
     private readonly knowledgeBaseService: KnowledgeBaseService,
-    @Inject(QUEUE_TOKEN) private readonly queue: Queue,
+    @Inject(QUEUE_TOKEN) private readonly queue: Queue | null,
   ) {}
 
   async create(
@@ -67,6 +67,10 @@ export class DocumentsService {
     const headResult = await this.storage.headObject(dto.objectKey);
     if (!headResult.exists) {
       throw new BadRequestException('对象不存在，请先完成文件上传');
+    }
+
+    if (!this.queue) {
+      throw new BadRequestException('文档处理队列未就绪，请确认 Redis 已启动并配置 REDIS_URL');
     }
 
     const document = await prisma.document.create({
