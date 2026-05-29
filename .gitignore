@@ -25,6 +25,9 @@ coverage/
 next-env.d.ts
 .DS_Store
 
+# 本地开发数据
+.devbrain/
+
 # scripts 目录构建产物
 apps/api/scripts/*.js
 apps/api/scripts/*.js.map

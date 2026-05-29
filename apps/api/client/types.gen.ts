@@ -97,6 +97,121 @@ export type KbListResponse = {
     items: Array<KbResponse>;
 };
 
+export type PresignUploadDto = {
+    /**
+     * 目标 KB ID
+     */
+    kbId: string;
+    /**
+     * 文件名
+     */
+    fileName: string;
+    /**
+     * MIME 类型
+     */
+    mimeType: string;
+    /**
+     * 文件大小（字节）
+     */
+    sizeBytes: number;
+};
+
+export type PresignUploadResponse = {
+    /**
+     * 上传 URL
+     */
+    uploadUrl: string;
+    /**
+     * HTTP 方法
+     */
+    uploadMethod: string;
+    /**
+     * 对象存储 key
+     */
+    objectKey: string;
+    /**
+     * 签名过期时间
+     */
+    expiresAt: string;
+    /**
+     * 创建 Document 所需 token
+     */
+    uploadToken: string;
+};
+
+export type CreateDocumentDto = {
+    /**
+     * 目标 KB ID
+     */
+    kbId: string;
+    /**
+     * 对象存储 key
+     */
+    objectKey: string;
+    /**
+     * 上传签名 token
+     */
+    uploadToken: string;
+    /**
+     * 原始文件名
+     */
+    originalName: string;
+    /**
+     * MIME 类型
+     */
+    mimeType?: string;
+    /**
+     * 文件大小（字节）
+     */
+    sizeBytes?: number;
+};
+
+export type DocumentResponse = {
+    /**
+     * Document ID
+     */
+    id: string;
+    /**
+     * 所属 KB ID
+     */
+    kbId: string;
+    /**
+     * 来源类型
+     */
+    sourceType: string;
+    /**
+     * 原始文件名
+     */
+    originalName: string;
+    /**
+     * 处理状态
+     */
+    status: string;
+    /**
+     * 错误码
+     */
+    errorCode?: string | null;
+    /**
+     * 错误信息
+     */
+    errorMessage?: string | null;
+    /**
+     * 创建时间
+     */
+    createdAt: string;
+    /**
+     * 更新时间
+     */
+    updatedAt: string;
+};
+
+export type DocumentListResponse = {
+    /**
+     * Document 列表
+     */
+    items: Array<DocumentResponse>;
+};
+
 export type HealthControllerCheckData = {
     body?: never;
     path?: never;
@@ -318,3 +433,129 @@ export type KnowledgeBaseControllerDetailResponses = {
 };
 
 export type KnowledgeBaseControllerDetailResponse = KnowledgeBaseControllerDetailResponses[keyof KnowledgeBaseControllerDetailResponses];
+
+export type UploadsControllerPresignData = {
+    body: PresignUploadDto;
+    path?: never;
+    query?: never;
+    url: '/uploads/presign';
+};
+
+export type UploadsControllerPresignErrors = {
+    /**
+     * 校验失败
+     */
+    400: unknown;
+    /**
+     * 未认证
+     */
+    401: unknown;
+    /**
+     * KB 不存在或无权访问
+     */
+    404: unknown;
+};
+
+export type UploadsControllerPresignResponses = {
+    /**
+     * 上传初始化成功，返回直传 URL
+     */
+    201: PresignUploadResponse;
+};
+
+export type UploadsControllerPresignResponse = UploadsControllerPresignResponses[keyof UploadsControllerPresignResponses];
+
+export type DocumentsControllerCreateData = {
+    body: CreateDocumentDto;
+    path?: never;
+    query?: never;
+    url: '/documents';
+};
+
+export type DocumentsControllerCreateErrors = {
+    /**
+     * 校验失败
+     */
+    400: unknown;
+    /**
+     * 未认证
+     */
+    401: unknown;
+    /**
+     * KB 不存在或无权访问
+     */
+    404: unknown;
+};
+
+export type DocumentsControllerCreateResponses = {
+    /**
+     * Document 创建成功并入队
+     */
+    201: DocumentResponse;
+};
+
+export type DocumentsControllerCreateResponse = DocumentsControllerCreateResponses[keyof DocumentsControllerCreateResponses];
+
+export type DocumentsControllerDetailData = {
+    body?: never;
+    path: {
+        /**
+         * Document ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/documents/{id}';
+};
+
+export type DocumentsControllerDetailErrors = {
+    /**
+     * 未认证
+     */
+    401: unknown;
+    /**
+     * Document 不存在或无权访问
+     */
+    404: unknown;
+};
+
+export type DocumentsControllerDetailResponses = {
+    /**
+     * Document 详情
+     */
+    200: DocumentResponse;
+};
+
+export type DocumentsControllerDetailResponse = DocumentsControllerDetailResponses[keyof DocumentsControllerDetailResponses];
+
+export type DocumentsControllerListByKbData = {
+    body?: never;
+    path: {
+        /**
+         * KB ID
+         */
+        kbId: string;
+    };
+    query?: never;
+    url: '/kbs/{kbId}/documents';
+};
+
+export type DocumentsControllerListByKbErrors = {
+    /**
+     * 未认证
+     */
+    401: unknown;
+    /**
+     * KB 不存在或无权访问
+     */
+    404: unknown;
+};
+
+export type DocumentsControllerListByKbResponses = {
+    /**
+     * Document 列表
+     */
+    200: DocumentListResponse;
+};
+
+export type DocumentsControllerListByKbResponse = DocumentsControllerListByKbResponses[keyof DocumentsControllerListByKbResponses];

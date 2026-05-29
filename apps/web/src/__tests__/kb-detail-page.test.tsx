@@ -13,14 +13,18 @@ vi.mock('next/navigation', () => ({
 }));
 
 let mockKb: { id: string; name: string; description?: string; createdAt: string; updatedAt: string } | null = null;
+let mockDocuments: { items: Array<{ id: string; originalName: string; status: string }> } = { items: [] };
 let mockError = false;
 
 vi.mock('@/lib/api-fetch', () => ({
-  apiFetch: vi.fn(() => {
+  apiFetch: vi.fn((url: string) => {
     if (mockError) {
       const err = new Error('加载失败') as Error & { status: number };
       err.status = 500;
       throw err;
+    }
+    if (url.includes('/documents')) {
+      return Promise.resolve(mockDocuments);
     }
     if (!mockKb) {
       const err = new Error('KB 不存在') as Error & { status: number };
@@ -42,6 +46,7 @@ function renderWithQuery(ui: React.ReactElement) {
 
 beforeEach(() => {
   mockKb = null;
+  mockDocuments = { items: [] };
   mockError = false;
   mockRouterPush.mockReset();
   mockRouterBack.mockReset();
@@ -67,7 +72,7 @@ describe('KB 详情页', () => {
     expect(screen.getByText('← 返回知识库列表')).toBeInTheDocument();
   });
 
-  it('渲染三个占位区', async () => {
+  it('渲染上传区、文档区和 AI 对话占位', async () => {
     mockKb = {
       id: 'kb-detail-1',
       name: 'Test',
@@ -82,13 +87,9 @@ describe('KB 详情页', () => {
       expect(screen.getByTestId('kb-documents-slot')).toBeInTheDocument();
       expect(screen.getByTestId('kb-chat-slot')).toBeInTheDocument();
     });
-
-    expect(screen.getByText('文档上传')).toBeInTheDocument();
-    expect(screen.getByText('文档列表')).toBeInTheDocument();
-    expect(screen.getByText('AI 对话')).toBeInTheDocument();
   });
 
-  it('占位按钮为 disabled 状态', async () => {
+  it('AI 对话按钮仍为 disabled 状态', async () => {
     mockKb = {
       id: 'kb-detail-1',
       name: 'Test',
@@ -99,13 +100,10 @@ describe('KB 详情页', () => {
     renderWithQuery(<KbDetailPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('kb-upload-slot')).toBeInTheDocument();
+      expect(screen.getByTestId('kb-chat-slot')).toBeInTheDocument();
     });
 
-    const buttons = screen.getAllByRole('button', { name: '即将上线' });
-    buttons.forEach((btn) => {
-      expect(btn).toBeDisabled();
-    });
+    expect(screen.getByText('即将上线')).toBeDisabled();
   });
 
   it('加载失败显示错误态和返回列表入口', async () => {

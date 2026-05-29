@@ -11,6 +11,7 @@ import * as request from 'supertest';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from '../app.module';
 import { AuthService } from '../auth/auth.service';
+import { QUEUE_TOKEN } from '../queue/queue.module';
 import { getPrismaClient } from '@devbrain/db';
 
 const prisma = getPrismaClient();
@@ -76,7 +77,13 @@ describe('KB API 集成测试', () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(QUEUE_TOKEN)
+      .useValue({
+        add: jest.fn().mockResolvedValue(undefined),
+        getJobCounts: jest.fn().mockResolvedValue({ waiting: 0, active: 0, completed: 0 }),
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.use(cookieParser());
