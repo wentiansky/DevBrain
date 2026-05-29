@@ -5,6 +5,9 @@ import { useQuery } from '@tanstack/react-query';
 import type { KbResponse } from '@devbrain/api/client';
 import { apiFetch } from '@/lib/api-fetch';
 import { Button } from '@/components/ui/button';
+import { MarkdownUpload } from '@/features/documents/markdown-upload';
+import { DocumentList } from '@/features/documents/document-list';
+import { useDocumentList } from '@/features/documents/use-documents';
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('zh-CN', {
@@ -25,6 +28,8 @@ export default function KbDetailPage() {
     queryKey: ['kb', kbId],
     queryFn: () => apiFetch<KbResponse>(`/api/kbs/${kbId}`),
   });
+
+  const { data: docList } = useDocumentList(kbId);
 
   if (isLoading) {
     return (
@@ -93,32 +98,12 @@ export default function KbDetailPage() {
       </div>
 
       <div className="mt-8 space-y-6">
-        <section
-          data-testid="kb-upload-slot"
-          className="rounded-lg border border-dashed p-8 text-center"
-        >
-          <h3 className="text-lg font-semibold text-muted-foreground">
-            文档上传
-          </h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            将在后续步骤中接入 Markdown 文件上传功能。
-          </p>
-          <Button variant="outline" className="mt-4" disabled>
-            即将上线
-          </Button>
+        <section data-testid="kb-upload-slot">
+          <MarkdownUpload kbId={kbId} />
         </section>
 
-        <section
-          data-testid="kb-documents-slot"
-          className="rounded-lg border border-dashed p-8 text-center"
-        >
-          <h3 className="text-lg font-semibold text-muted-foreground">
-            文档列表
-          </h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            文档处理和状态管理将在后续步骤中实现。
-          </p>
-          <div className="mt-4 h-2 w-32 mx-auto rounded-full bg-muted" />
+        <section data-testid="kb-documents-slot">
+          <DocumentList documents={docList?.items ?? []} />
         </section>
 
         <section
@@ -129,7 +114,7 @@ export default function KbDetailPage() {
             AI 对话
           </h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            基于知识库内容的智能问答将在后续步骤中接入。
+            基于知识库内容的智能问答将在后续步骤中接入，完成后此处展示对话界面。
           </p>
           <Button variant="outline" className="mt-4" disabled>
             即将上线

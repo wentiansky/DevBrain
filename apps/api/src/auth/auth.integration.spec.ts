@@ -11,9 +11,15 @@ import * as request from 'supertest';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from '../app.module';
 import { AuthService } from './auth.service';
+import { QUEUE_TOKEN } from '../queue/queue.module';
 import { getPrismaClient } from '@devbrain/db';
 
 const prisma = getPrismaClient();
+
+const mockQueue = {
+  add: jest.fn().mockResolvedValue(undefined),
+  getJobCounts: jest.fn().mockResolvedValue({ waiting: 0, active: 0, completed: 0 }),
+};
 
 async function checkDbConnection(): Promise<boolean> {
   try {
@@ -42,7 +48,10 @@ describe('Auth API 集成测试', () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(QUEUE_TOKEN)
+      .useValue(mockQueue)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.use(cookieParser());

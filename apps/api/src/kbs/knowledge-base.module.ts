@@ -8,5 +8,6 @@ import { SpacesModule } from '../spaces/spaces.module';
   imports: [AuthModule, SpacesModule],
   controllers: [KnowledgeBaseController],
   providers: [KnowledgeBaseService],
+  exports: [KnowledgeBaseService],
 })
 export class KnowledgeBaseModule {}

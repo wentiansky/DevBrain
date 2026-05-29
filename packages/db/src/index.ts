@@ -16,6 +16,19 @@ export type {
 export type { Prisma } from '@prisma/client';
 export { PrismaClient };
 
+export type { ObjectStorage } from './storage';
+export {
+  DocumentErrorCodes,
+  ErrorMessages,
+} from './error-codes';
+export type { DocumentErrorCode } from './error-codes';
+export {
+  DOCUMENT_PROCESSING_QUEUE,
+  DOCUMENT_PROCESSING_JOB,
+  isDocumentJobPayload,
+} from './queue-constants';
+export type { DocumentJobPayload } from './queue-constants';
+
 let prisma: PrismaClient;
 
 export function getPrismaClient(): PrismaClient {

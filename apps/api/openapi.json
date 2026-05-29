@@ -291,6 +291,184 @@
           "KnowledgeBase"
         ]
       }
+    },
+    "/uploads/presign": {
+      "post": {
+        "operationId": "UploadsController_presign",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "上传初始化成功，返回直传 URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresignUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "校验失败"
+          },
+          "401": {
+            "description": "未认证"
+          },
+          "404": {
+            "description": "KB 不存在或无权访问"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Markdown 上传初始化",
+        "tags": [
+          "Uploads"
+        ]
+      }
+    },
+    "/documents": {
+      "post": {
+        "operationId": "DocumentsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Document 创建成功并入队",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "校验失败"
+          },
+          "401": {
+            "description": "未认证"
+          },
+          "404": {
+            "description": "KB 不存在或无权访问"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建 Document",
+        "tags": [
+          "Documents"
+        ]
+      }
+    },
+    "/documents/{id}": {
+      "get": {
+        "operationId": "DocumentsController_detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Document ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document 详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未认证"
+          },
+          "404": {
+            "description": "Document 不存在或无权访问"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取 Document 详情",
+        "tags": [
+          "Documents"
+        ]
+      }
+    },
+    "/kbs/{kbId}/documents": {
+      "get": {
+        "operationId": "DocumentsController_listByKb",
+        "parameters": [
+          {
+            "name": "kbId",
+            "required": true,
+            "in": "path",
+            "description": "KB ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document 列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未认证"
+          },
+          "404": {
+            "description": "KB 不存在或无权访问"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "列出 KB 下 Document",
+        "tags": [
+          "Documents"
+        ]
+      }
     }
   },
   "info": {
@@ -466,6 +644,169 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/KbResponse"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "PresignUploadDto": {
+        "type": "object",
+        "properties": {
+          "kbId": {
+            "type": "string",
+            "description": "目标 KB ID"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "文件名"
+          },
+          "mimeType": {
+            "type": "string",
+            "description": "MIME 类型"
+          },
+          "sizeBytes": {
+            "type": "number",
+            "description": "文件大小（字节）",
+            "maximum": 20971520
+          }
+        },
+        "required": [
+          "kbId",
+          "fileName",
+          "mimeType",
+          "sizeBytes"
+        ]
+      },
+      "PresignUploadResponse": {
+        "type": "object",
+        "properties": {
+          "uploadUrl": {
+            "type": "string",
+            "description": "上传 URL"
+          },
+          "uploadMethod": {
+            "type": "string",
+            "description": "HTTP 方法"
+          },
+          "objectKey": {
+            "type": "string",
+            "description": "对象存储 key"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "签名过期时间"
+          },
+          "uploadToken": {
+            "type": "string",
+            "description": "创建 Document 所需 token"
+          }
+        },
+        "required": [
+          "uploadUrl",
+          "uploadMethod",
+          "objectKey",
+          "expiresAt",
+          "uploadToken"
+        ]
+      },
+      "CreateDocumentDto": {
+        "type": "object",
+        "properties": {
+          "kbId": {
+            "type": "string",
+            "description": "目标 KB ID"
+          },
+          "objectKey": {
+            "type": "string",
+            "description": "对象存储 key"
+          },
+          "uploadToken": {
+            "type": "string",
+            "description": "上传签名 token"
+          },
+          "originalName": {
+            "type": "string",
+            "description": "原始文件名"
+          },
+          "mimeType": {
+            "type": "string",
+            "description": "MIME 类型"
+          },
+          "sizeBytes": {
+            "type": "number",
+            "description": "文件大小（字节）"
+          }
+        },
+        "required": [
+          "kbId",
+          "objectKey",
+          "uploadToken",
+          "originalName"
+        ]
+      },
+      "DocumentResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Document ID"
+          },
+          "kbId": {
+            "type": "string",
+            "description": "所属 KB ID"
+          },
+          "sourceType": {
+            "type": "string",
+            "description": "来源类型"
+          },
+          "originalName": {
+            "type": "string",
+            "description": "原始文件名"
+          },
+          "status": {
+            "type": "string",
+            "description": "处理状态"
+          },
+          "errorCode": {
+            "type": "object",
+            "description": "错误码"
+          },
+          "errorMessage": {
+            "type": "object",
+            "description": "错误信息"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "创建时间"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "更新时间"
+          }
+        },
+        "required": [
+          "id",
+          "kbId",
+          "sourceType",
+          "originalName",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "DocumentListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Document 列表",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentResponse"
             }
           }
         },

@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
+import * as express from 'express';
 import type { User } from '@devbrain/db';
 import type { Express } from 'express';
 
@@ -9,7 +10,19 @@ import type { Express } from 'express';
 type _DbTypeSmoke = User;
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true,
+  });
+
+  const expressApp = app.getHttpAdapter().getInstance() as Express;
+
+  expressApp.use(
+    '/storage/local',
+    express.raw({
+      type: '*/*',
+      limit: '21mb',
+    }),
+  );
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('DevBrain API')
@@ -22,7 +35,7 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, documentFactory);
 
-  (app.getHttpAdapter().getInstance() as Express).set('trust proxy', 1);
+  expressApp.set('trust proxy', 1);
   app.use(cookieParser());
 
   const isProduction = process.env.NODE_ENV === 'production';

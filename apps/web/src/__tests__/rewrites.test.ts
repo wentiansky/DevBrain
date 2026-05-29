@@ -35,6 +35,13 @@ describe('next.config rewrites', () => {
     expect(apiRewrite).toBeDefined();
   });
 
+  it('should include /storage/local/:path* rewrite for presigned PUT', async () => {
+    const rewrites = await getRewrites();
+    const rewrite = rewrites.find((r: RewriteRule) => r.source === '/storage/local/:path*');
+    expect(rewrite).toBeDefined();
+    expect(rewrite?.destination).toContain('/storage/local/:path*');
+  });
+
   it('should have auth and api rewrites pointing to same upstream', async () => {
     const rewrites = await getRewrites();
     const authRewrite = rewrites.find((r: RewriteRule) => r.source === '/auth/:path*');
