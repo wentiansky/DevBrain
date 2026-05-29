@@ -177,6 +177,120 @@
           "Auth"
         ]
       }
+    },
+    "/kbs": {
+      "post": {
+        "operationId": "KnowledgeBaseController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateKbDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "KB 创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KbResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入校验失败（含传入 spaceId 被拒绝的场景）"
+          },
+          "401": {
+            "description": "未认证"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建个人 KB",
+        "tags": [
+          "KnowledgeBase"
+        ]
+      },
+      "get": {
+        "operationId": "KnowledgeBaseController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "个人 KB 列表（按 updatedAt desc, id desc 排序）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KbListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未认证"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "列出个人 KB",
+        "tags": [
+          "KnowledgeBase"
+        ]
+      }
+    },
+    "/kbs/{id}": {
+      "get": {
+        "operationId": "KnowledgeBaseController_detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "KB ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "KB 详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KbResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未认证"
+          },
+          "404": {
+            "description": "KB 不存在或无权访问"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取 KB 详情",
+        "tags": [
+          "KnowledgeBase"
+        ]
+      }
     }
   },
   "info": {
@@ -288,6 +402,75 @@
         "required": [
           "email",
           "password"
+        ]
+      },
+      "CreateKbDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "KB 名称（1-200 个字符）",
+            "example": "我的知识库",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "description": "KB 描述（最多 500 个字符）",
+            "example": "存放项目文档和笔记",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "KbResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "KB ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "KB 名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "KB 描述"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "创建时间"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "更新时间"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "KbListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "KB 列表",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KbResponse"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       }
     }

@@ -91,7 +91,7 @@ services:
     image: ${REGISTRY:-}${IMAGE_PREFIX:-devbrain/}web:${IMAGE_TAG:-latest}
     container_name: devbrain-web
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      API_URL: ${API_URL:-http://api:3001}
       SENTRY_DSN: ${SENTRY_DSN:-}
       NODE_ENV: ${NODE_ENV:-development}
     ports:

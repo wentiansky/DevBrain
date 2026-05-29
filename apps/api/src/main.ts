@@ -36,7 +36,7 @@ async function bootstrap() {
     origin: corsOrigin === '*' ? corsOrigin : corsOrigin.split(',').map((s) => s.trim()),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-skip-refresh'],
   });
 
   const port = process.env.API_PORT ?? 3001;

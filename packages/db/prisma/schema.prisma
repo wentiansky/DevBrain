@@ -130,6 +130,8 @@ model Space {
   memberships    Membership[]
   knowledgeBases KnowledgeBase[]
 
+  // personal space 唯一性由 add_personal_space_unique migration 中的 SQL partial unique index 约束
+  // CREATE UNIQUE INDEX "Space_createdById_personal_unique" ON "Space"("createdById") WHERE "type" = 'personal'
   @@index([createdById])
 }
 

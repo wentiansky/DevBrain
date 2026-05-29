@@ -166,8 +166,8 @@ describe('apiFetch', () => {
     const firstAttemptUrls = new Set<string>();
     const hasRefreshed = { value: false };
 
-    vi.mocked(fetch).mockImplementation((url) => {
-      const urlStr = typeof url === 'string' ? url : String(url);
+    vi.mocked(fetch).mockImplementation((reqUrl) => {
+      const urlStr = typeof reqUrl === 'string' ? reqUrl : String(reqUrl);
       if (urlStr === '/auth/refresh') {
         refreshCalls++;
         hasRefreshed.value = true;
