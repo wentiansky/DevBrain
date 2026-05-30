@@ -15,7 +15,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css,yaml,yml}\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css,yaml,yml}\" --ignore-path .gitignore",
     "gen:openapi": "pnpm --filter @devbrain/api gen:openapi",
-    "gen:client": "pnpm --filter @devbrain/api gen:client"
+    "gen:client": "pnpm --filter @devbrain/api gen:client",
+    "test:e2e": "pnpm --filter @devbrain/web test:e2e"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -29,6 +30,7 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "prettier": "^3.5.0",
     "typescript": "^5.7.0"
   }

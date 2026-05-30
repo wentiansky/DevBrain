@@ -12,6 +12,7 @@ import { DocumentsModule } from './documents/documents.module';
 import { ProvidersModule } from './providers/providers.module';
 import { RetrievalModule } from './retrieval/retrieval.module';
 import { GenerationModule } from './generation/generation.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { GenerationModule } from './generation/generation.module';
     ProvidersModule,
     RetrievalModule,
     GenerationModule,
+    ChatModule,
   ],
   controllers: [HealthController, ReadyzController],
   providers: [

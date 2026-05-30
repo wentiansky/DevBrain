@@ -268,6 +268,189 @@ export type ChunkListResponse = {
     nextCursor?: string | null;
 };
 
+export type ChatRequestDto = {
+    /**
+     * 用户消息内容
+     */
+    message: string;
+    /**
+     * 会话 ID，不传则创建新会话
+     */
+    conversationId?: string;
+    /**
+     * 客户端消息 ID，用于幂等去重
+     */
+    clientMessageId?: string;
+};
+
+export type ChatErrorResponse = {
+    /**
+     * 错误状态码
+     */
+    statusCode: number;
+    /**
+     * 错误信息
+     */
+    message: string;
+    /**
+     * 错误码
+     */
+    error?: string | null;
+};
+
+export type ConversationResponse = {
+    /**
+     * 会话 ID
+     */
+    id: string;
+    /**
+     * KB ID
+     */
+    kbId: string;
+    /**
+     * 会话标题
+     */
+    title?: string | null;
+    /**
+     * 创建时间
+     */
+    createdAt: string;
+    /**
+     * 更新时间
+     */
+    updatedAt: string;
+};
+
+export type ConversationListResponse = {
+    /**
+     * 会话列表
+     */
+    items: Array<ConversationResponse>;
+};
+
+export type CitationResponse = {
+    /**
+     * citation ID
+     */
+    id: string;
+    /**
+     * chunk ID
+     */
+    chunkId: string;
+    /**
+     * 文档 ID
+     */
+    documentId: string;
+    /**
+     * 来源类型
+     */
+    sourceType: string;
+    /**
+     * 引用排序
+     */
+    order: number;
+    /**
+     * 相关性分数
+     */
+    score: number;
+    /**
+     * chunk 文本预览
+     */
+    chunkText: string;
+    /**
+     * 标题路径
+     */
+    headingPath: Array<string>;
+    /**
+     * chunk 锚点
+     */
+    anchor?: string | null;
+    /**
+     * 页码
+     */
+    page?: number | null;
+    /**
+     * 边界框坐标
+     */
+    bbox?: {
+        [key: string]: unknown;
+    } | null;
+};
+
+export type MessageResponse = {
+    /**
+     * 消息 ID
+     */
+    id: string;
+    /**
+     * 会话 ID
+     */
+    conversationId: string;
+    /**
+     * 角色
+     */
+    role: string;
+    /**
+     * 消息内容
+     */
+    content?: string | null;
+    /**
+     * 消息状态
+     */
+    status: string;
+    /**
+     * provider 名称
+     */
+    provider?: string | null;
+    /**
+     * 模型名称
+     */
+    model?: string | null;
+    /**
+     * 错误码
+     */
+    errorCode?: string | null;
+    /**
+     * 错误信息（脱敏）
+     */
+    errorMessage?: string | null;
+    /**
+     * 创建时间
+     */
+    createdAt: string;
+    /**
+     * assistant 消息的 citations
+     */
+    citations?: Array<CitationResponse>;
+};
+
+export type ConversationDetailResponse = {
+    /**
+     * 会话 ID
+     */
+    id: string;
+    /**
+     * KB ID
+     */
+    kbId: string;
+    /**
+     * 会话标题
+     */
+    title?: string | null;
+    /**
+     * 创建时间
+     */
+    createdAt: string;
+    /**
+     * 更新时间
+     */
+    updatedAt: string;
+    /**
+     * 会话消息列表
+     */
+    messages: Array<MessageResponse>;
+};
+
 export type HealthControllerCheckData = {
     body?: never;
     path?: never;
@@ -656,3 +839,111 @@ export type DocumentsControllerGetChunksResponses = {
 };
 
 export type DocumentsControllerGetChunksResponse = DocumentsControllerGetChunksResponses[keyof DocumentsControllerGetChunksResponses];
+
+export type ChatControllerChatData = {
+    body: ChatRequestDto;
+    path: {
+        /**
+         * KB ID
+         */
+        kbId: string;
+    };
+    query?: never;
+    url: '/kbs/{kbId}/chat';
+};
+
+export type ChatControllerChatErrors = {
+    /**
+     * 输入校验失败
+     */
+    400: ChatErrorResponse;
+    /**
+     * 未认证
+     */
+    401: ChatErrorResponse;
+    /**
+     * KB 或会话不存在/无权访问
+     */
+    404: ChatErrorResponse;
+};
+
+export type ChatControllerChatError = ChatControllerChatErrors[keyof ChatControllerChatErrors];
+
+export type ChatControllerChatResponses = {
+    /**
+     * 流式回答（text/event-stream）
+     */
+    200: unknown;
+};
+
+export type ChatControllerListConversationsData = {
+    body?: never;
+    path: {
+        /**
+         * KB ID
+         */
+        kbId: string;
+    };
+    query?: never;
+    url: '/kbs/{kbId}/conversations';
+};
+
+export type ChatControllerListConversationsErrors = {
+    /**
+     * 未认证
+     */
+    401: ChatErrorResponse;
+    /**
+     * KB 不存在或无权访问
+     */
+    404: ChatErrorResponse;
+};
+
+export type ChatControllerListConversationsError = ChatControllerListConversationsErrors[keyof ChatControllerListConversationsErrors];
+
+export type ChatControllerListConversationsResponses = {
+    /**
+     * 会话列表
+     */
+    200: ConversationListResponse;
+};
+
+export type ChatControllerListConversationsResponse = ChatControllerListConversationsResponses[keyof ChatControllerListConversationsResponses];
+
+export type ChatControllerGetConversationData = {
+    body?: never;
+    path: {
+        /**
+         * KB ID
+         */
+        kbId: string;
+        /**
+         * 会话 ID
+         */
+        conversationId: string;
+    };
+    query?: never;
+    url: '/kbs/{kbId}/conversations/{conversationId}';
+};
+
+export type ChatControllerGetConversationErrors = {
+    /**
+     * 未认证
+     */
+    401: ChatErrorResponse;
+    /**
+     * 会话不存在或无权访问
+     */
+    404: ChatErrorResponse;
+};
+
+export type ChatControllerGetConversationError = ChatControllerGetConversationErrors[keyof ChatControllerGetConversationErrors];
+
+export type ChatControllerGetConversationResponses = {
+    /**
+     * 会话详情
+     */
+    200: ConversationDetailResponse;
+};
+
+export type ChatControllerGetConversationResponse = ChatControllerGetConversationResponses[keyof ChatControllerGetConversationResponses];

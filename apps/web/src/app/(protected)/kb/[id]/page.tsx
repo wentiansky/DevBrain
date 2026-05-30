@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import type { KbResponse } from '@devbrain/api/client';
 import { apiFetch } from '@/lib/api-fetch';
@@ -108,16 +109,14 @@ export default function KbDetailPage() {
 
         <section
           data-testid="kb-chat-slot"
-          className="rounded-lg border border-dashed p-8 text-center"
+          className="rounded-lg border p-6 text-center"
         >
-          <h3 className="text-lg font-semibold text-muted-foreground">
-            AI 对话
-          </h3>
+          <h3 className="text-lg font-semibold">AI 对话</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            基于知识库内容的智能问答将在后续步骤中接入，完成后此处展示对话界面。
+            基于知识库内容的智能问答
           </p>
-          <Button variant="outline" className="mt-4" disabled>
-            即将上线
+          <Button asChild variant="default" className="mt-4">
+            <Link href={`/kb/${kb.id}/chat`}>进入 AI 对话</Link>
           </Button>
         </section>
       </div>

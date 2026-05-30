@@ -72,7 +72,7 @@ describe('KB 详情页', () => {
     expect(screen.getByText('← 返回知识库列表')).toBeInTheDocument();
   });
 
-  it('渲染上传区、文档区和 AI 对话占位', async () => {
+  it('渲染上传区、文档区和 AI 对话入口', async () => {
     mockKb = {
       id: 'kb-detail-1',
       name: 'Test',
@@ -87,23 +87,6 @@ describe('KB 详情页', () => {
       expect(screen.getByTestId('kb-documents-slot')).toBeInTheDocument();
       expect(screen.getByTestId('kb-chat-slot')).toBeInTheDocument();
     });
-  });
-
-  it('AI 对话按钮仍为 disabled 状态', async () => {
-    mockKb = {
-      id: 'kb-detail-1',
-      name: 'Test',
-      createdAt: '2026-05-01T00:00:00Z',
-      updatedAt: '2026-05-29T00:00:00Z',
-    };
-
-    renderWithQuery(<KbDetailPage />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('kb-chat-slot')).toBeInTheDocument();
-    });
-
-    expect(screen.getByText('即将上线')).toBeDisabled();
   });
 
   it('加载失败显示错误态和返回列表入口', async () => {

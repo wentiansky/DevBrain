@@ -530,6 +530,199 @@
           "Documents"
         ]
       }
+    },
+    "/kbs/{kbId}/chat": {
+      "post": {
+        "operationId": "ChatController_chat",
+        "parameters": [
+          {
+            "name": "kbId",
+            "required": true,
+            "in": "path",
+            "description": "KB ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "流式回答（text/event-stream）"
+          },
+          "400": {
+            "description": "输入校验失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未认证",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "KB 或会话不存在/无权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "在 KB 内发送消息（流式回答）",
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/kbs/{kbId}/conversations": {
+      "get": {
+        "operationId": "ChatController_listConversations",
+        "parameters": [
+          {
+            "name": "kbId",
+            "required": true,
+            "in": "path",
+            "description": "KB ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "会话列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未认证",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "KB 不存在或无权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询 KB 下的会话列表",
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/kbs/{kbId}/conversations/{conversationId}": {
+      "get": {
+        "operationId": "ChatController_getConversation",
+        "parameters": [
+          {
+            "name": "kbId",
+            "required": true,
+            "in": "path",
+            "description": "KB ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "conversationId",
+            "required": true,
+            "in": "path",
+            "description": "会话 ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "会话详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未认证",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "会话不存在或无权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询会话详情（含消息和 citations）",
+        "tags": [
+          "Chat"
+        ]
+      }
     }
   },
   "info": {
@@ -956,6 +1149,282 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "ChatRequestDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "用户消息内容",
+            "example": "这段代码的作用是什么？"
+          },
+          "conversationId": {
+            "type": "string",
+            "description": "会话 ID，不传则创建新会话",
+            "example": "clx..."
+          },
+          "clientMessageId": {
+            "type": "string",
+            "description": "客户端消息 ID，用于幂等去重",
+            "example": "client-msg-001"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "ChatErrorResponse": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "description": "错误状态码",
+            "example": 404
+          },
+          "message": {
+            "type": "string",
+            "description": "错误信息",
+            "example": "KB 不存在或无权访问"
+          },
+          "error": {
+            "type": "string",
+            "description": "错误码",
+            "nullable": true,
+            "example": "not_found"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message"
+        ]
+      },
+      "ConversationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "会话 ID"
+          },
+          "kbId": {
+            "type": "string",
+            "description": "KB ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "会话标题",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "创建时间"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "更新时间"
+          }
+        },
+        "required": [
+          "id",
+          "kbId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ConversationListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "会话列表",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversationResponse"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CitationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "citation ID"
+          },
+          "chunkId": {
+            "type": "string",
+            "description": "chunk ID"
+          },
+          "documentId": {
+            "type": "string",
+            "description": "文档 ID"
+          },
+          "sourceType": {
+            "type": "string",
+            "description": "来源类型",
+            "example": "markdown"
+          },
+          "order": {
+            "type": "number",
+            "description": "引用排序",
+            "example": 0
+          },
+          "score": {
+            "type": "number",
+            "description": "相关性分数",
+            "example": 0.85
+          },
+          "chunkText": {
+            "type": "string",
+            "description": "chunk 文本预览"
+          },
+          "headingPath": {
+            "description": "标题路径",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "anchor": {
+            "type": "string",
+            "description": "chunk 锚点",
+            "nullable": true
+          },
+          "page": {
+            "type": "number",
+            "description": "页码",
+            "nullable": true
+          },
+          "bbox": {
+            "type": "object",
+            "description": "边界框坐标",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "chunkId",
+          "documentId",
+          "sourceType",
+          "order",
+          "score",
+          "chunkText",
+          "headingPath"
+        ]
+      },
+      "MessageResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "消息 ID"
+          },
+          "conversationId": {
+            "type": "string",
+            "description": "会话 ID"
+          },
+          "role": {
+            "type": "string",
+            "description": "角色",
+            "example": "user"
+          },
+          "content": {
+            "type": "string",
+            "description": "消息内容",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "description": "消息状态",
+            "example": "completed"
+          },
+          "provider": {
+            "type": "string",
+            "description": "provider 名称",
+            "nullable": true,
+            "example": "qwen"
+          },
+          "model": {
+            "type": "string",
+            "description": "模型名称",
+            "nullable": true,
+            "example": "qwen-plus"
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "错误码",
+            "nullable": true
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "错误信息（脱敏）",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "创建时间"
+          },
+          "citations": {
+            "description": "assistant 消息的 citations",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CitationResponse"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "role",
+          "status",
+          "createdAt"
+        ]
+      },
+      "ConversationDetailResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "会话 ID"
+          },
+          "kbId": {
+            "type": "string",
+            "description": "KB ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "会话标题",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "创建时间"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "更新时间"
+          },
+          "messages": {
+            "description": "会话消息列表",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageResponse"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "kbId",
+          "createdAt",
+          "updatedAt",
+          "messages"
         ]
       }
     }
