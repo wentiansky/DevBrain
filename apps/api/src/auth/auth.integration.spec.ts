@@ -82,6 +82,7 @@ describe('Auth API 集成测试', () => {
     if (skipTests) return;
     await prisma.refreshToken.deleteMany();
     await prisma.refreshTokenFamily.deleteMany();
+    await prisma.chunk.deleteMany();
     await prisma.knowledgeBase.deleteMany();
     await prisma.membership.deleteMany();
     await prisma.space.deleteMany();

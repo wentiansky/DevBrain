@@ -9,6 +9,9 @@ import { StorageModule } from './storage/storage.module';
 import { QueueModule } from './queue/queue.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { DocumentsModule } from './documents/documents.module';
+import { ProvidersModule } from './providers/providers.module';
+import { RetrievalModule } from './retrieval/retrieval.module';
+import { GenerationModule } from './generation/generation.module';
 
 @Module({
   imports: [
@@ -19,6 +22,9 @@ import { DocumentsModule } from './documents/documents.module';
     QueueModule,
     UploadsModule,
     DocumentsModule,
+    ProvidersModule,
+    RetrievalModule,
+    GenerationModule,
   ],
   controllers: [HealthController, ReadyzController],
   providers: [

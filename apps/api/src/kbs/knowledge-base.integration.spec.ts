@@ -32,6 +32,8 @@ async function ensureCleanState(): Promise<boolean> {
   try {
     await prisma.refreshToken.deleteMany();
     await prisma.refreshTokenFamily.deleteMany();
+    await prisma.chunk.deleteMany();
+    await prisma.document.deleteMany();
     await prisma.knowledgeBase.deleteMany();
     await prisma.membership.deleteMany();
     await prisma.space.deleteMany();
