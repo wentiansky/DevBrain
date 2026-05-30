@@ -48,6 +48,7 @@ async function checkDbConnection(): Promise<boolean> {
 
 async function ensureCleanState(): Promise<boolean> {
   try {
+    await prisma.chunk.deleteMany();
     await prisma.document.deleteMany();
     await prisma.knowledgeBase.deleteMany();
     await prisma.membership.deleteMany();
