@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
+export type { $Enums } from '@prisma/client';
 export type {
   User,
   Document,
