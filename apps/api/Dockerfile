@@ -50,4 +50,4 @@ ENV NODE_ENV=production \
 EXPOSE 3001
 USER node
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "prisma generate --schema=/app/prisma/schema.prisma && node dist/main.js"]

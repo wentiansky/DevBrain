@@ -32,13 +32,17 @@ RUN pnpm --filter @devbrain/db exec prisma generate \
  && pnpm deploy --filter @devbrain/worker --prod --legacy /deploy/worker
 
 FROM base AS runtime
+# Prisma CLI 用于容器启动前生成 @prisma/client
+RUN npm install -g prisma@6 --no-fund --no-audit \
+  && npm cache clean --force
 WORKDIR /app
 COPY --from=builder /deploy/worker/package.json ./package.json
 COPY --from=builder /deploy/worker/node_modules ./node_modules
 COPY --from=builder /deploy/worker/dist ./dist
+COPY --from=builder /repo/packages/db/prisma ./prisma
 RUN mkdir -p /home/node/devbrain-storage \
   && chown -R node:node /home/node/devbrain-storage
 ENV NODE_ENV=production
 USER node
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "prisma generate --schema=/app/prisma/schema.prisma && node dist/main.js"]
