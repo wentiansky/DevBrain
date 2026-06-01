@@ -36,6 +36,8 @@ WORKDIR /app
 COPY --from=builder /deploy/worker/package.json ./package.json
 COPY --from=builder /deploy/worker/node_modules ./node_modules
 COPY --from=builder /deploy/worker/dist ./dist
+RUN mkdir -p /home/node/devbrain-storage \
+  && chown -R node:node /home/node/devbrain-storage
 ENV NODE_ENV=production
 USER node
 ENTRYPOINT ["/usr/bin/tini", "--"]

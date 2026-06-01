@@ -43,6 +43,8 @@ COPY --from=builder /deploy/api/node_modules ./node_modules
 COPY --from=builder /deploy/api/dist ./dist
 # migrate 服务使用 --schema=/app/prisma/schema.prisma
 COPY --from=builder /repo/packages/db/prisma ./prisma
+RUN mkdir -p /home/node/devbrain-storage \
+  && chown -R node:node /home/node/devbrain-storage
 ENV NODE_ENV=production \
     API_PORT=3001
 EXPOSE 3001

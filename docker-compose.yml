@@ -66,7 +66,29 @@ services:
       API_PORT: '3001'
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-}
+      AUTH_ACCESS_TOKEN_TTL_SECONDS: ${AUTH_ACCESS_TOKEN_TTL_SECONDS:-900}
+      AUTH_REFRESH_TOKEN_TTL_SECONDS: ${AUTH_REFRESH_TOKEN_TTL_SECONDS:-604800}
+      AUTH_COOKIE_NAME: ${AUTH_COOKIE_NAME:-devbrain_refresh}
+      AUTH_COOKIE_PATH: ${AUTH_COOKIE_PATH:-/auth}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      REFRESH_TOKEN_PEPPER: ${REFRESH_TOKEN_PEPPER:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      STORAGE_SIGNATURE_SECRET: ${STORAGE_SIGNATURE_SECRET:-}
+      STORAGE_TOKEN_TTL_SECONDS: ${STORAGE_TOKEN_TTL_SECONDS:-300}
+      DEV_STORAGE_ROOT: /home/node/devbrain-storage
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-mock}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-v3}
+      EMBEDDING_TIMEOUT_MS: ${EMBEDDING_TIMEOUT_MS:-30000}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-20}
+      RERANK_PROVIDER: ${RERANK_PROVIDER:-mock}
+      RERANK_MODEL: ${RERANK_MODEL:-gte-rerank}
+      RERANK_TIMEOUT_MS: ${RERANK_TIMEOUT_MS:-30000}
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      LLM_MODEL: ${LLM_MODEL:-qwen-plus}
+      LLM_TIMEOUT_MS: ${LLM_TIMEOUT_MS:-60000}
+      RETRIEVAL_LOW_RELEVANCE_THRESHOLD: ${RETRIEVAL_LOW_RELEVANCE_THRESHOLD:-0.2}
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-https://dashscope.aliyuncs.com}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
@@ -79,7 +101,9 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       NODE_ENV: ${NODE_ENV:-development}
     ports:
-      - '${API_PORT:-3001}:3001'
+      - '127.0.0.1:${API_PORT:-3001}:3001'
+    volumes:
+      - storagedata:/home/node/devbrain-storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -103,7 +127,7 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       NODE_ENV: ${NODE_ENV:-development}
     ports:
-      - '${WEB_PORT:-3000}:3000'
+      - '127.0.0.1:${WEB_PORT:-3000}:3000'
     depends_on:
       - api
     networks:
@@ -119,7 +143,15 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://devbrain:devbrain@postgres:5432/devbrain}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      STORAGE_SIGNATURE_SECRET: ${STORAGE_SIGNATURE_SECRET:-}
+      STORAGE_TOKEN_TTL_SECONDS: ${STORAGE_TOKEN_TTL_SECONDS:-300}
+      DEV_STORAGE_ROOT: /home/node/devbrain-storage
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-mock}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-v3}
+      EMBEDDING_TIMEOUT_MS: ${EMBEDDING_TIMEOUT_MS:-30000}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-20}
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-https://dashscope.aliyuncs.com}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
@@ -129,6 +161,8 @@ services:
       R2_BUCKET: ${R2_BUCKET:-}
       SENTRY_DSN: ${SENTRY_DSN:-}
       NODE_ENV: ${NODE_ENV:-development}
+    volumes:
+      - storagedata:/home/node/devbrain-storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -163,7 +197,6 @@ services:
     container_name: devbrain-caddy
     ports:
       - '${CADDY_HTTP_PORT:-80}:80'
-      - '${CADDY_HTTPS_PORT:-443}:443'
     volumes:
       - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddydata:/data
@@ -184,3 +217,4 @@ volumes:
   pgdata:
   redisdata:
   caddydata:
+  storagedata:
