@@ -1,0 +1,29 @@
+# 排除本地构建产物，避免 host 上的 node_modules 覆盖镜像内 pnpm install 结果
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/coverage
+
+# 本地状态文件
+.git
+.github
+.gitignore
+.env
+.env.*
+!.env.example
+
+# 工具与文档
+.claude
+.codex
+.cursor
+.devbrain
+.kilo
+.private
+.pnpm-store
+docs
+openspec
+
+# 日志与缓存
+**/*.log
+**/.DS_Store

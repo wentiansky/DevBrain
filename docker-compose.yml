@@ -40,9 +40,11 @@ services:
 
   migrate:
     image: ${REGISTRY:-}${IMAGE_PREFIX:-devbrain/}api:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     container_name: devbrain-migrate
-    # TODO (Change 10)：Dockerfile 需从 workspace root 构建，确保 packages/db 在容器内可用
-    command: ['npx', 'prisma', 'migrate', 'deploy', '--schema=packages/db/prisma/schema.prisma']
+    command: ['prisma', 'migrate', 'deploy', '--schema=/app/prisma/schema.prisma']
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://devbrain:devbrain@postgres:5432/devbrain}
     depends_on:
@@ -54,6 +56,9 @@ services:
 
   api:
     image: ${REGISTRY:-}${IMAGE_PREFIX:-devbrain/}api:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     container_name: devbrain-api
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://devbrain:devbrain@postgres:5432/devbrain}
@@ -89,6 +94,9 @@ services:
 
   web:
     image: ${REGISTRY:-}${IMAGE_PREFIX:-devbrain/}web:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
     container_name: devbrain-web
     environment:
       API_URL: ${API_URL:-http://api:3001}
@@ -104,6 +112,9 @@ services:
 
   worker:
     image: ${REGISTRY:-}${IMAGE_PREFIX:-devbrain/}worker:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
     container_name: devbrain-worker
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://devbrain:devbrain@postgres:5432/devbrain}
