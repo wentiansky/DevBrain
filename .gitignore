@@ -33,6 +33,9 @@ apps/api/scripts/*.js
 apps/api/scripts/*.js.map
 apps/api/scripts/*.d.ts
 
+# Prisma Client 由 packages/db 在构建时生成
+packages/db/src/generated/
+
 # 环境变量文件 —— 仅 .env.example 被追踪
 .env
 .env.*

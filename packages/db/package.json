@@ -5,7 +5,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "dev": "tsc -w",
-    "build": "tsc",
+    "build": "prisma generate && tsc && cp -R src/generated dist/generated",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev --create-only",
     "db:migrate:deploy": "prisma migrate deploy",
@@ -13,9 +13,9 @@
     "db:studio": "prisma studio",
     "db:test": "pnpm run db:test:integration",
     "db:test:integration": "jest --runInBand --testRegex \".*\\.integration\\.test\\.ts$\"",
-    "test": "jest --passWithNoTests",
-    "lint": "eslint \"{src,prisma}/**/*.ts\"",
-    "typecheck": "tsc --noEmit"
+    "test": "prisma generate && jest --passWithNoTests",
+    "lint": "eslint \"{src,prisma}/**/*.ts\" --ignore-pattern \"src/generated/**\"",
+    "typecheck": "prisma generate && tsc --noEmit"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0"

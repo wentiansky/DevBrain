@@ -26,12 +26,9 @@ COPY apps/worker apps/worker
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --offline
 
-RUN pnpm --filter @devbrain/db exec prisma generate \
- && pnpm --filter @devbrain/db build \
+RUN pnpm --filter @devbrain/db build \
  && pnpm --filter @devbrain/worker build \
- && pnpm deploy --filter @devbrain/worker --prod --legacy /deploy/worker \
- && cd /deploy/worker \
- && /repo/packages/db/node_modules/.bin/prisma generate --schema=/repo/packages/db/prisma/schema.prisma
+ && pnpm deploy --filter @devbrain/worker --prod --legacy /deploy/worker
 
 FROM base AS runtime
 WORKDIR /app

@@ -28,12 +28,9 @@ COPY apps/api apps/api
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --offline
 
-RUN pnpm --filter @devbrain/db exec prisma generate \
- && pnpm --filter @devbrain/db build \
+RUN pnpm --filter @devbrain/db build \
  && pnpm --filter @devbrain/api build \
- && pnpm deploy --filter @devbrain/api --prod --legacy /deploy/api \
- && cd /deploy/api \
- && /repo/packages/db/node_modules/.bin/prisma generate --schema=/repo/packages/db/prisma/schema.prisma
+ && pnpm deploy --filter @devbrain/api --prod --legacy /deploy/api
 
 FROM base AS runtime
 # Prisma CLI 仅 migrate 服务复用 api 镜像时需要，体积约 50MB

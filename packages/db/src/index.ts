@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from './generated/prisma';
 
-export type { $Enums } from '@prisma/client';
+export type { $Enums } from './generated/prisma';
 export type {
   User,
   Document,
@@ -13,8 +13,8 @@ export type {
   MessageCitation,
   RefreshTokenFamily,
   RefreshToken,
-} from '@prisma/client';
-export type { Prisma } from '@prisma/client';
+} from './generated/prisma';
+export type { Prisma } from './generated/prisma';
 export { PrismaClient };
 
 export type { ObjectStorage } from './storage';

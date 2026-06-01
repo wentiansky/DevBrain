@@ -29,8 +29,7 @@ COPY apps/web apps/web
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --offline
 
-RUN pnpm --filter @devbrain/db exec prisma generate \
- && pnpm --filter @devbrain/db build \
+RUN pnpm --filter @devbrain/db build \
  && pnpm --filter @devbrain/web build
 
 FROM base AS runtime
