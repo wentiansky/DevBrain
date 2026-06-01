@@ -212,6 +212,8 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
   const loadHistory = useCallback(
     (historyMessages: ChatMessage[]) => {
       setMessages(historyMessages);
+      setRejectionCode(null);
+      setError(null);
     },
     [],
   );

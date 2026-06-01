@@ -24,7 +24,7 @@ export function createDashScopeRerankProvider(
       documents: RerankDocument[],
       topN: number,
     ): Promise<RerankResult[]> {
-      const url = `${baseUrl}/compatible-mode/v1/rerank`;
+      const url = `${baseUrl}/api/v1/services/rerank/text-rerank/text-rerank`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -88,14 +88,17 @@ export function createDashScopeRerankProvider(
 
         const data: Record<string, unknown> = await response.json();
 
-        if (!data.results || !Array.isArray(data.results)) {
+        const output = data.output as Record<string, unknown> | undefined;
+        const results = output?.results ?? data.results;
+
+        if (!Array.isArray(results)) {
           throw new ProviderError(
             ProviderErrorCodes.SCHEMA_MISMATCH,
             'Rerank 服务返回格式异常',
           );
         }
 
-        const items = data.results as Array<Record<string, unknown>>;
+        const items = results as Array<Record<string, unknown>>;
         return items.map((item) => {
           const docIndex = item.index as number;
           const score = item.relevance_score;

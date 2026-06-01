@@ -55,6 +55,33 @@ describe('DashScopeRerankProvider', () => {
     expect(results[2]).toEqual({ chunkId: 'chunk-b', score: 0.60, index: 1 });
   });
 
+  it('DashScope 原生 API 的 output.results 成功响应应返回正确映射的 RerankResult', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          request_id: 'req-rerank',
+          output: {
+            results: [
+              { index: 2, relevance_score: 0.88 },
+              { index: 0, relevance_score: 0.41 },
+            ],
+          },
+          usage: {
+            total_tokens: 42,
+          },
+        }),
+    });
+
+    const provider = createDashScopeRerankProvider(buildConfig());
+    const results = await provider.rerank('测试查询', testDocs, 2);
+
+    expect(results).toEqual([
+      { chunkId: 'chunk-c', score: 0.88, index: 2 },
+      { chunkId: 'chunk-a', score: 0.41, index: 0 },
+    ]);
+  });
+
   it('非数组 results 应抛 SCHEMA_MISMATCH', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,

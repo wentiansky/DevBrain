@@ -217,9 +217,9 @@ docker compose config
 - [x] 创建个人 KB。
 - [x] 上传 Markdown。
 - [x] worker ready。
-- [ ] 真实的检索/生成。
-- [ ] Chat streaming。
-- [ ] 文本 citation 定位。
+- [x] 真实的检索/生成。
+- [x] Chat streaming。
+- [x] 文本 citation 定位。
 
 ### P1
 

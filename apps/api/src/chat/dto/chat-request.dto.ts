@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsUUID } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
 export class ChatRequestDto {
   @ApiProperty({
@@ -14,7 +14,7 @@ export class ChatRequestDto {
     example: 'clx...',
   })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   conversationId?: string;
 
   @ApiPropertyOptional({
