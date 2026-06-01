@@ -31,7 +31,9 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 RUN pnpm --filter @devbrain/db exec prisma generate \
  && pnpm --filter @devbrain/db build \
  && pnpm --filter @devbrain/api build \
- && pnpm deploy --filter @devbrain/api --prod --legacy /deploy/api
+ && pnpm deploy --filter @devbrain/api --prod --legacy /deploy/api \
+ && cd /deploy/api \
+ && /repo/node_modules/.bin/prisma generate --schema=/repo/packages/db/prisma/schema.prisma
 
 FROM base AS runtime
 # Prisma CLI 仅 migrate 服务复用 api 镜像时需要，体积约 50MB
@@ -50,4 +52,4 @@ ENV NODE_ENV=production \
 EXPOSE 3001
 USER node
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["sh", "-c", "prisma generate --schema=/app/prisma/schema.prisma && node dist/main.js"]
+CMD ["node", "dist/main.js"]
