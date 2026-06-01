@@ -33,7 +33,7 @@ RUN pnpm --filter @devbrain/db exec prisma generate \
  && pnpm --filter @devbrain/api build \
  && pnpm deploy --filter @devbrain/api --prod --legacy /deploy/api \
  && cd /deploy/api \
- && /repo/node_modules/.bin/prisma generate --schema=/repo/packages/db/prisma/schema.prisma
+ && /repo/packages/db/node_modules/.bin/prisma generate --schema=/repo/packages/db/prisma/schema.prisma
 
 FROM base AS runtime
 # Prisma CLI 仅 migrate 服务复用 api 镜像时需要，体积约 50MB

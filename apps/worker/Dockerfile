@@ -31,7 +31,7 @@ RUN pnpm --filter @devbrain/db exec prisma generate \
  && pnpm --filter @devbrain/worker build \
  && pnpm deploy --filter @devbrain/worker --prod --legacy /deploy/worker \
  && cd /deploy/worker \
- && /repo/node_modules/.bin/prisma generate --schema=/repo/packages/db/prisma/schema.prisma
+ && /repo/packages/db/node_modules/.bin/prisma generate --schema=/repo/packages/db/prisma/schema.prisma
 
 FROM base AS runtime
 WORKDIR /app
