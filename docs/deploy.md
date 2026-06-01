@@ -121,11 +121,12 @@ docker compose ps
   @auth path /auth/*
   reverse_proxy @auth api:3001
 
-  @api path /api/*
-  reverse_proxy @api api:3001 {
-    flush_interval -1
-    transport http {
-      read_timeout 5m
+  handle_path /api/* {
+    reverse_proxy api:3001 {
+      flush_interval -1
+      transport http {
+        read_timeout 5m
+      }
     }
   }
 
@@ -365,7 +366,7 @@ docker compose logs -f worker
 
 试用阶段跳过：
 
-- `/api/healthz` 与 `/api/readyz` 验证。
+- `/api/healthz` 与 `/api/readyz` 验证。Caddy 必须使用 `handle_path /api/*` 剥掉 `/api` 前缀后再转发到 API，因为 API 容器内部路由是 `/healthz`、`/readyz`、`/kbs`。
 - HTTPS 证书验证。
 - Langfuse trace 验证。
 - Sentry 测试事件。

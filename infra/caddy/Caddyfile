@@ -1,16 +1,24 @@
 :80 {
   encode zstd gzip
 
-  @auth path /auth/*
-  reverse_proxy @auth api:3001
+  handle /auth/* {
+    reverse_proxy api:3001
+  }
 
-  @api path /api/*
-  reverse_proxy @api api:3001 {
-    flush_interval -1
-    transport http {
-      read_timeout 5m
+  handle /storage/local/* {
+    reverse_proxy api:3001
+  }
+
+  handle_path /api/* {
+    reverse_proxy api:3001 {
+      flush_interval -1
+      transport http {
+        read_timeout 5m
+      }
     }
   }
 
-  reverse_proxy /* web:3000
+  handle {
+    reverse_proxy web:3000
+  }
 }
