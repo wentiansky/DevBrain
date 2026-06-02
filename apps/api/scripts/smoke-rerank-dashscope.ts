@@ -1,5 +1,5 @@
 /**
- * smoke:rerank:dashscope — DashScope gte-rerank 真实 smoke 脚本
+ * smoke:rerank:dashscope — DashScope gte-rerank-v2 真实 smoke 脚本
  *
  * 前置条件：
  * - 配置 DASHSCOPE_API_KEY 环境变量
@@ -41,7 +41,7 @@ async function main(): Promise<void> {
     provider = createDashScopeRerankProvider({
       apiKey,
       baseUrl: process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com',
-      model: process.env.RERANK_MODEL || 'gte-rerank',
+      model: process.env.RERANK_MODEL || 'gte-rerank-v2',
       timeoutMs: parseInt(process.env.RERANK_TIMEOUT_MS || '30000', 10),
     });
   } catch (err) {
@@ -62,11 +62,11 @@ async function main(): Promise<void> {
       console.log(`  index=${r.index} chunkId=${r.chunkId} score=${r.score.toFixed(4)}`);
     }
 
-    console.log('SUCCESS | provider: [dashscope] | model: [gte-rerank]');
+    console.log(`SUCCESS | provider: [dashscope] | model: [${provider.model}]`);
   } catch (err) {
     const error = err as { statusCode?: number; requestId?: string; message: string };
     console.error(
-      `FAILED | provider: [dashscope] | model: [gte-rerank] | status: [${error.statusCode ?? 'N/A'}] | requestId: [${error.requestId ?? 'N/A'}] | error: [${error.message}]`,
+      `FAILED | provider: [dashscope] | model: [${provider.model}] | status: [${error.statusCode ?? 'N/A'}] | requestId: [${error.requestId ?? 'N/A'}] | error: [${error.message}]`,
     );
     process.exit(1);
   }

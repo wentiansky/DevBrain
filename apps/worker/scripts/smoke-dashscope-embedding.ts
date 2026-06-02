@@ -44,7 +44,7 @@ async function main(): Promise<void> {
     baseUrl: process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com',
     model: process.env.EMBEDDING_MODEL || 'text-embedding-v3',
     timeoutMs: parseInt(process.env.EMBEDDING_TIMEOUT_MS || '30000', 10),
-    batchSize: parseInt(process.env.EMBEDDING_BATCH_SIZE || '20', 10),
+    batchSize: parseInt(process.env.EMBEDDING_BATCH_SIZE || '10', 10),
   };
 
   let provider: EmbeddingProvider;

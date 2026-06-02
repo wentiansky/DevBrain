@@ -143,7 +143,9 @@ CORS_ORIGIN=http://<vps-ip>
 
 EMBEDDING_PROVIDER=dashscope
 RERANK_PROVIDER=dashscope
+RERANK_MODEL=gte-rerank-v2
 LLM_PROVIDER=qwen
+LLM_MODEL=qwen-plus-2025-12-01
 DASHSCOPE_API_KEY=<DashScope API Key>
 
 NODE_ENV=production

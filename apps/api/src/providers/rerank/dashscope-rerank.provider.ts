@@ -12,7 +12,7 @@ export function createDashScopeRerankProvider(
   config: DashScopeRerankConfig,
 ): RerankProvider {
   const baseUrl = config.baseUrl || 'https://dashscope.aliyuncs.com';
-  const model = config.model || 'gte-rerank';
+  const model = config.model || 'gte-rerank-v2';
   const timeoutMs = config.timeoutMs ?? 30000;
 
   return {

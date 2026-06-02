@@ -32,7 +32,7 @@ async function main(): Promise<void> {
     provider = createQwenLlmProvider({
       apiKey,
       baseUrl: process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com',
-      model: process.env.LLM_MODEL || 'qwen-plus',
+      model: process.env.LLM_MODEL || 'qwen-plus-2025-12-01',
       timeoutMs: parseInt(process.env.LLM_TIMEOUT_MS || '60000', 10),
     });
   } catch (err) {

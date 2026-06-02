@@ -70,7 +70,7 @@ describe('QwenLlmProvider', () => {
   it('应有正确的 providerName 和 model', () => {
     const provider = createQwenLlmProvider(buildConfig());
     expect(provider.providerName).toBe('qwen');
-    expect(provider.model).toBe('qwen-plus');
+    expect(provider.model).toBe('qwen-plus-2025-12-01');
   });
 
   it('成功流式响应应返回 delta 和 finish 事件', async () => {

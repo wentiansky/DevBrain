@@ -30,7 +30,7 @@ describe('DashScopeRerankProvider', () => {
   it('应有正确的 providerName 和 model', () => {
     const provider = createDashScopeRerankProvider(buildConfig());
     expect(provider.providerName).toBe('dashscope');
-    expect(provider.model).toBe('gte-rerank');
+    expect(provider.model).toBe('gte-rerank-v2');
   });
 
   it('成功响应应返回正确映射的 RerankResult', async () => {

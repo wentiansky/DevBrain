@@ -10,7 +10,7 @@ export interface QwenLlmConfig {
 
 export function createQwenLlmProvider(config: QwenLlmConfig): LlmProvider {
   const baseUrl = config.baseUrl || 'https://dashscope.aliyuncs.com';
-  const model = config.model || 'qwen-plus';
+  const model = config.model || 'qwen-plus-2025-12-01';
   const timeoutMs = config.timeoutMs ?? 60000;
 
   return {

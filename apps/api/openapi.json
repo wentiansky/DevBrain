@@ -1352,7 +1352,7 @@
             "type": "string",
             "description": "模型名称",
             "nullable": true,
-            "example": "qwen-plus"
+            "example": "qwen-plus-2025-12-01"
           },
           "errorCode": {
             "type": "string",

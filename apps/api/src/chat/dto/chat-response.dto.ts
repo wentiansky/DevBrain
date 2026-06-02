@@ -54,7 +54,7 @@ export class MessageResponse {
   @ApiPropertyOptional({ description: 'provider 名称', type: 'string', nullable: true, example: 'qwen' })
   provider?: string | null;
 
-  @ApiPropertyOptional({ description: '模型名称', type: 'string', nullable: true, example: 'qwen-plus' })
+  @ApiPropertyOptional({ description: '模型名称', type: 'string', nullable: true, example: 'qwen-plus-2025-12-01' })
   model?: string | null;
 
   @ApiPropertyOptional({ description: '错误码', type: 'string', nullable: true })

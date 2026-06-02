@@ -53,7 +53,7 @@ export const RETRIEVAL_LOW_RELEVANCE_THRESHOLD = 'RETRIEVAL_LOW_RELEVANCE_THRESH
           return createDashScopeRerankProvider({
             apiKey,
             baseUrl: process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com',
-            model: process.env.RERANK_MODEL || 'gte-rerank',
+            model: process.env.RERANK_MODEL || 'gte-rerank-v2',
             timeoutMs: parseInt(process.env.RERANK_TIMEOUT_MS || '30000', 10),
           });
         }
@@ -74,7 +74,7 @@ export const RETRIEVAL_LOW_RELEVANCE_THRESHOLD = 'RETRIEVAL_LOW_RELEVANCE_THRESH
           return createQwenLlmProvider({
             apiKey,
             baseUrl: process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com',
-            model: process.env.LLM_MODEL || 'qwen-plus',
+            model: process.env.LLM_MODEL || 'qwen-plus-2025-12-01',
             timeoutMs: parseInt(process.env.LLM_TIMEOUT_MS || '60000', 10),
           });
         }
