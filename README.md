@@ -221,6 +221,10 @@ docker compose config
 - [x] Chat streaming。
 - [x] 文本 citation 定位。
 
+### P0 收尾性能优化专项
+
+- [ ] `optimize-web-first-load-perf`：受保护段 RSC 静态外壳 + 路由级骨架、客户端 auth/KB 并行 fetch、bundle 瘦身、双 Caddyfile + HTTPS + HTTP/2 + HSTS + 静态资源 `immutable`、容器 healthcheck + warmup、Cloudflare CDN 接入（国内边缘节点）、Web Vitals 上报。**零 auth 改动**（不新增 Proxy、不新增后端 endpoint、不做服务端 auth 校验）。诚实预算：无 CDN ≤ 5s（跨洲物理上限）/ CDN 命中静态资源 ≤ 2.5s / 二次访问 ≤ 1.5s；消除"正在加载..."三段占位帧。详见 `openspec/changes/optimize-web-first-load-perf/` 与 `docs/planning/devbrain-prd.md` §11.5。
+
 ### P1
 
 - [ ] 原 P0 剩余产品化能力：找回密码、team、多格式文档、完整文档管理、模型设置、部署、监控、备份、反馈闭环。

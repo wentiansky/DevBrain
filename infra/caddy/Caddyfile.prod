@@ -1,0 +1,24 @@
+<your-domain>, www.<your-domain> {
+	encode zstd gzip
+
+	handle /auth/* {
+		reverse_proxy api:3001
+	}
+
+	handle /storage/local/* {
+		reverse_proxy api:3001
+	}
+
+	handle_path /api/* {
+		reverse_proxy api:3001 {
+			flush_interval -1
+			transport http {
+				read_timeout 5m
+			}
+		}
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

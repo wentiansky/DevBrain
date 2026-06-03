@@ -31,6 +31,9 @@ jobs:
           - service: worker
             dockerfile: apps/worker/Dockerfile
             image: devbrain-worker
+          - service: postgres
+            dockerfile: infra/postgres/Dockerfile
+            image: devbrain-postgres
 
     steps:
       - name: 检出代码

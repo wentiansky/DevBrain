@@ -1,0 +1,27 @@
+services:
+  postgres:
+    build: !reset null
+    pull_policy: always
+
+  migrate:
+    build: !reset null
+    pull_policy: always
+
+  api:
+    build: !reset null
+    pull_policy: always
+
+  web:
+    build: !reset null
+    pull_policy: always
+
+  worker:
+    build: !reset null
+    pull_policy: always
+
+  caddy:
+    ports:
+      - '${CADDY_HTTPS_PORT:-443}:443'
+      - '${CADDY_HTTPS_PORT:-443}:443/udp'
+    volumes:
+      - ./infra/caddy/${CADDY_CONFIG:-Caddyfile}:/etc/caddy/Caddyfile:ro

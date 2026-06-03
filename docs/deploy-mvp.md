@@ -151,6 +151,14 @@ DASHSCOPE_API_KEY=<DashScope API Key>
 NODE_ENV=production
 ```
 
+后续生产命令统一使用合并后的 compose 文件：
+
+```bash
+COMPOSE='docker compose -f docker-compose.yml -f docker-compose.prod.yml'
+```
+
+`docker-compose.yml` 只保留本地和生产共享的服务拓扑；`docker-compose.prod.yml` 删除应用和 Postgres 的 `build` 配置，改为拉取 GHCR 镜像，并承载 Caddy 443 端口与 `CADDY_CONFIG` 切换。
+
 试用阶段这些可以留空：
 
 ```env
@@ -177,37 +185,163 @@ git status --short .env
 先解析 compose：
 
 ```bash
-docker compose config >/tmp/devbrain-compose.yml
+$COMPOSE config >/tmp/devbrain-compose.yml
 ```
 
-拉应用镜像并构建 Postgres 镜像：
+拉生产镜像：
 
 ```bash
-docker compose pull api web worker
-docker compose build postgres
+$COMPOSE pull postgres api web worker
 ```
 
 启动数据库和 Redis，并执行迁移：
 
 ```bash
-docker compose up -d postgres redis
-docker compose run --rm migrate
+$COMPOSE up -d postgres redis
+$COMPOSE run --rm migrate
 ```
 
 启动业务服务：
 
 ```bash
-docker compose up -d api web worker caddy
-docker compose ps
+$COMPOSE up -d api web worker caddy
+$COMPOSE ps
 ```
+
+> P0 性能优化专项落地后（参见 `openspec/changes/optimize-web-first-load-perf/`），`web` 服务会带 healthcheck，`caddy` 通过 `depends_on: web.condition: service_healthy` 在 Web 就绪后再接流量。**切流前必须确认 `$COMPOSE ps` 输出中 `web`、`api` 状态为 `(healthy)`**，否则用户首请求会撞到 Next.js standalone JIT 冷启动延迟。
 
 端口预期：
 
-- Caddy：`0.0.0.0:80->80/tcp`
+- Caddy：`0.0.0.0:80->80/tcp`（仅 IP/dev 模式）或 `0.0.0.0:80->80/tcp 0.0.0.0:443->443/tcp`（域名 HTTPS 模式）
 - API：`127.0.0.1:3001->3001/tcp`
 - Web：`127.0.0.1:3000->3000/tcp`
 - Postgres：`127.0.0.1:5432->5432/tcp`
 - Redis：`127.0.0.1:6379->6379/tcp`
+
+## 6.5 切换到域名 + HTTPS（P0 性能优化专项）
+
+P0 性能优化专项 `optimize-web-first-load-perf` 启用后，`infra/caddy/` 下有两份 Caddyfile，由 compose 环境变量 `CADDY_CONFIG` 决定 mount 哪份：
+
+| `CADDY_CONFIG` 值 | mount 文件 | 行为 |
+|---|---|---|
+| 未设置（默认） | `infra/caddy/Caddyfile` | `:80` plain HTTP；适合本地 `pnpm dev` 与 VPS IP 直连 |
+| `Caddyfile.prod` | `infra/caddy/Caddyfile.prod` | 域名 + 自动 ACME + HTTPS + HTTP/2 |
+
+前置条件：
+
+1. 已购买域名，已把 A 记录指向 VPS 公网 IP，`dig <domain> +short` 能解析到 IP。
+2. VPS 防火墙/安全组**同时开放 `80/tcp` 与 `443/tcp`**；ACME HTTP-01 校验依赖 `:80` 可达，浏览器走 `:443`，缺一不可。
+3. 生产启动命令必须带 `docker-compose.prod.yml`，让 caddy 服务包含 `'${CADDY_HTTPS_PORT:-443}:443'`，否则即便 ACME 签发成功，HTTPS 流量也无法到达容器。
+4. `.env` 中追加 `CADDY_CONFIG=Caddyfile.prod`、`WEB_DOMAIN=<生产域名>`、`ACME_EMAIL=<你的邮箱>`。
+
+切换步骤：
+
+```bash
+# 编辑 .env，追加 prod 配置项
+cat >> .env <<'EOF'
+CADDY_CONFIG=Caddyfile.prod
+WEB_DOMAIN=devbrain.example.com
+ACME_EMAIL=ops@example.com
+EOF
+
+# 校验两份 Caddyfile 语法
+docker run --rm -v $PWD/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
+  caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+docker run --rm \
+  -e WEB_DOMAIN=devbrain.example.com -e ACME_EMAIL=ops@example.com \
+  -v $PWD/infra/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro \
+  caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+
+# 重新解析并重建 caddy（如果 compose 上次未带 443 端口或换了 mount，需 --force-recreate）
+$COMPOSE config >/tmp/devbrain-compose.yml
+$COMPOSE up -d --force-recreate caddy
+
+# 观察 Caddy 日志，确认 ACME 签发成功
+$COMPOSE logs -f caddy
+```
+
+回滚：把 `.env` 中 `CADDY_CONFIG` 注释掉，`$COMPOSE up -d --force-recreate caddy`，即回到 dev `Caddyfile`（`:80` plain HTTP）；DB schema 和应用容器不变。
+
+签发成功后验证：
+
+```bash
+# HTTP/2 协商
+curl -I --http2 https://devbrain.example.com/
+
+# 静态资源命中长缓存
+curl -I https://devbrain.example.com/_next/static/<任意 chunk>.js \
+  | grep -i cache-control
+# 期望：Cache-Control: public, max-age=31536000, immutable
+
+# HTML 路由不缓存
+curl -I https://devbrain.example.com/ | grep -i cache-control
+# 期望：Cache-Control: private, no-cache 或等效语义
+```
+
+## 6.6 接入 Cloudflare CDN（P0 性能优化专项）
+
+跨洲部署（如德国 VPS、国内访问）首屏 LCP 物理上限 ≈ 5s；要进 2.5s 必须由 CDN 提供国内边缘节点。本节记录 Cloudflare 免费档接入步骤与回退预案。
+
+前置条件：
+
+1. §6.5 已完成，HTTPS + ACME + HTTP/2 已工作，回源 Caddy 持有有效证书。
+2. 域名管理权限可切 NS。
+
+接入步骤：
+
+```text
+# 1. Cloudflare 注册账号并添加域名，记录分配的两条 NS
+
+# 2. 把域名注册商的 NS 切换到 Cloudflare；先把 TTL 调到 5min 便于回退
+dig NS <生产域名> +short  # 等到看到 Cloudflare NS 生效
+
+# 3. Cloudflare DNS 面板：A 记录 <生产域名> 指 VPS 公网 IP，Proxy 状态：橙云 ON
+
+# 4. SSL/TLS 面板：
+#    - 加密模式：Full (Strict)
+#    - Always Use HTTPS：ON
+#    - 不要在 Cloudflare 端开 HSTS（HSTS 由回源 Caddy 控制，避免双发冲突）
+
+# 5. Speed / Optimization 面板：启用 Brotli、Early Hints、HTTP/3
+
+# 6. Caching → Cache Rules 创建两条规则：
+#    规则 1（Cache Next static assets）：
+#      条件：(http.request.uri.path matches "^/_next/static/" or http.request.uri.path matches "^/_next/image")
+#      动作：Cache Eligibility = Eligible for cache + Edge TTL = 1 year + Browser TTL = Respect origin
+#    规则 2（Bypass dynamic）：
+#      条件：URI Path 匹配 / 或 /login 或 /register 或 /kb/ 或 /api/ 或 /auth/ 或 /storage/local/
+#      动作：Cache Eligibility = Bypass cache
+
+# 7. SSL/TLS → Origin Server 生成 Origin Certificate，下载 Cloudflare CA 证书
+
+# 8. 在 Caddyfile.prod 启用 Authenticated Origin Pulls（mTLS），mount CA 证书；
+#    或退而求其次：VPS 防火墙 ufw allow from <Cloudflare IP 段> to any port 80,443，其他 deny
+```
+
+验证（首次访问后等几分钟边缘缓存生效）：
+
+```bash
+# 静态资源：第二次访问必须 HIT
+curl -I https://<生产域名>/_next/static/<chunk>.js | grep -i cf-cache-status
+# 期望：cf-cache-status: HIT
+
+# HTML 必须 BYPASS / DYNAMIC，不能 HIT
+curl -I https://<生产域名>/ | grep -i cf-cache-status
+# 期望：cf-cache-status: BYPASS（或 DYNAMIC）
+
+# API 必须 BYPASS
+curl -I https://<生产域名>/api/healthz | grep -i cf-cache-status
+# 期望：cf-cache-status: BYPASS
+
+# HTTP/3 协商
+curl -I --http3 https://<生产域名>/
+```
+
+回退预案：
+
+- DNS NS 切回原服务商；NS TTL 5min 等几分钟即可恢复 VPS 直连。
+- 若 Cloudflare 国内节点抽风（症状：HTML 访问超时但回源 VPS 正常），先在 Cloudflare DNS 面板把 A 记录 Proxy 状态从橙云改灰云（临时绕过 CDN，DNS 解析直接到 VPS），再决定 NS 切回。
+- 若 Cache Rules 误配导致 HTML 被缓存串号，立即 Caching → Configuration 面板 Purge Everything；同时检查 Cache Rules 规则 2 是否正确覆盖 HTML 路径。
 
 ## 7. 验证
 
@@ -228,7 +362,7 @@ curl -I http://<vps-ip>/
 查看日志：
 
 ```bash
-docker compose logs --tail=120 api web worker caddy
+$COMPOSE logs --tail=120 api web worker caddy
 ```
 
 Worker 正常日志应包含：
@@ -247,7 +381,7 @@ Worker 已启动，等待文档处理任务...
 5. 查看 worker 日志：
 
 ```bash
-docker compose logs -f worker
+$COMPOSE logs -f worker
 ```
 
 6. 文档 ready 后进入 Chat 提问，确认有流式回答和引用。
@@ -272,16 +406,16 @@ IMAGE_TAG=sha-<NEW_SHA>
 然后：
 
 ```bash
-docker compose pull api web worker
-docker compose up -d api web worker
-docker compose restart caddy
-docker compose ps
+$COMPOSE pull postgres api web worker
+$COMPOSE up -d api web worker
+$COMPOSE restart caddy
+$COMPOSE ps
 ```
 
 如果 schema 有 migration，先执行：
 
 ```bash
-docker compose run --rm migrate
+$COMPOSE run --rm migrate
 ```
 
 ## 9. 常见错误
@@ -330,9 +464,9 @@ generator client {
 解决方法：
 
 ```bash
-docker compose ps
-docker compose logs --tail=120 web api caddy
-docker compose restart caddy
+$COMPOSE ps
+$COMPOSE logs --tail=120 web api caddy
+$COMPOSE restart caddy
 ```
 
 然后重新验证：
@@ -361,7 +495,7 @@ curl -I http://<vps-ip>/api/healthz
 
 ```bash
 echo "<GHCR_READ_ONLY_PAT>" | docker login ghcr.io -u wentiansky --password-stdin
-docker compose pull api web worker
+$COMPOSE pull postgres api web worker
 ```
 
 ### 错误8：API/Web/Postgres/Redis 暴露到公网

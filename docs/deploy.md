@@ -68,21 +68,28 @@ docker compose run --rm migrate
 
 需要有 `.github/workflows/build-and-push.yml`，触发条件至少包含 `push: branches: [main]` 和 `workflow_dispatch`。
 
-每次构建至少产出三个镜像：
+每次构建至少产出四个镜像：
 
 - `ghcr.io/<owner>/devbrain-api:sha-<sha>`
 - `ghcr.io/<owner>/devbrain-web:sha-<sha>`
 - `ghcr.io/<owner>/devbrain-worker:sha-<sha>`
+- `ghcr.io/<owner>/devbrain-postgres:sha-<sha>`
 
 验收标准：
 
 - `main` 推送后 workflow 成功。
-- GHCR 能看到三个 `sha-<full-sha>` tag。
+- GHCR 能看到四个 `sha-<full-sha>` tag。
 - 本机登录 GHCR 后能 `docker pull ghcr.io/<owner>/devbrain-api:sha-<sha>`。
 
 ### 1.3 Compose 生产端口与环境变量收敛
 
-上线前必须确认 `docker-compose.yml` 在 VPS 上不会把内部服务暴露到公网。
+上线前必须确认 `docker-compose.yml` 与 `docker-compose.prod.yml` 合并后的生产配置不会把内部服务暴露到公网。生产环境必须使用：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml config
+```
+
+`docker-compose.yml` 保留本地和生产共享的服务拓扑；`docker-compose.prod.yml` 负责删除应用和 Postgres 的 `build` 配置、启用 GHCR 镜像拉取策略，并补齐生产 Caddy 的 HTTPS 端口与可切换 Caddyfile mount。
 
 端口要求：
 
@@ -90,7 +97,7 @@ docker compose run --rm migrate
 - Redis 只绑定 `127.0.0.1:${REDIS_PORT:-6379}:6379`。
 - API 不直接暴露公网；如需宿主机调试，只绑定 `127.0.0.1:${API_PORT:-3001}:3001`。
 - Web 不直接暴露公网；如需宿主机调试，只绑定 `127.0.0.1:${WEB_PORT:-3000}:3000`。
-- Caddy 是唯一公网入口，试用阶段只开放 80。
+- Caddy 是唯一公网入口。生产 override 可预置 443 映射；IP 试用阶段由 VPS 防火墙/安全组只开放 80，切到域名 HTTPS 后再开放 443。
 
 环境变量要求：
 
@@ -104,8 +111,8 @@ docker compose run --rm migrate
 验收标准：
 
 ```bash
-docker compose config
-docker compose ps
+docker compose -f docker-compose.yml -f docker-compose.prod.yml config
+docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ```
 
 在 VPS 上，公网访问 `http://<vps-ip>:3001` 和 `http://<vps-ip>:3000` 不应成功；`http://<vps-ip>/` 应由 Caddy 转发。
@@ -137,7 +144,7 @@ docker compose ps
 验收标准：
 
 ```bash
-docker compose config
+docker compose -f docker-compose.yml -f docker-compose.prod.yml config
 ```
 
 恢复完整生产模式时，把 `:80` 改成 `{$DEVBRAIN_DOMAIN}`，并在 `.env` 中配置 `DEVBRAIN_DOMAIN=<your-domain>`。
@@ -172,7 +179,7 @@ docker compose exec backup pg_restore --list /backups/devbrain_<date>.dump
 1. 确认第 1 节前置补齐已经合入 `main`。
 2. 推送 `main` 或手动触发 `build-and-push` workflow。
 3. 等待 workflow 成功，记录本次 commit SHA，后文记为 `<SHA>`。
-4. 在 GHCR 页面确认 `devbrain-api`、`devbrain-web`、`devbrain-worker` 三个镜像可被 VPS 拉取。
+4. 在 GHCR 页面确认 `devbrain-api`、`devbrain-web`、`devbrain-worker`、`devbrain-postgres` 四个镜像可被 VPS 拉取。
 5. 为 VPS 创建只读 PAT，权限只需要 `read:packages`。
 
 ---
@@ -246,7 +253,7 @@ git fetch --depth=1 origin <SHA>
 git checkout <SHA>
 ```
 
-VPS 通过仓库获得 `docker-compose.yml`、`infra/`、`.env.example` 和迁移相关文件。API / Web / Worker 运行时使用 GHCR 镜像，不在 VPS 上构建应用镜像。
+VPS 通过仓库获得 `docker-compose.yml`、`docker-compose.prod.yml`、`infra/`、`.env.example` 和迁移相关文件。API / Web / Worker 运行时使用 GHCR 镜像，不在 VPS 上构建应用镜像。
 
 ---
 
@@ -299,32 +306,40 @@ git status --short .env
 
 该命令应无输出。
 
-### 4.2 拉取镜像与构建 Postgres 基础镜像
+后续生产命令统一使用合并后的 compose 文件：
 
 ```bash
-docker compose pull api web worker
-docker compose build postgres
+COMPOSE='docker compose -f docker-compose.yml -f docker-compose.prod.yml'
+```
+
+如果 `config` 阶段提示 `!reset` 无法解析，说明 VPS 的 Docker Compose 版本过旧，需要先升级 `docker-compose-plugin`。
+
+### 4.2 拉取生产镜像
+
+```bash
+$COMPOSE config >/tmp/devbrain-compose.yml
+$COMPOSE pull postgres api web worker
 ```
 
 ### 4.3 启动基础服务并迁移
 
 ```bash
-docker compose up -d postgres redis
-docker compose run --rm migrate
+$COMPOSE up -d postgres redis
+$COMPOSE run --rm migrate
 ```
 
 迁移失败时先看：
 
 ```bash
-docker compose logs postgres
-docker compose logs migrate
+$COMPOSE logs postgres
+$COMPOSE logs migrate
 ```
 
 ### 4.4 启动业务服务
 
 ```bash
-docker compose up -d api web worker caddy
-docker compose ps
+$COMPOSE up -d api web worker caddy
+$COMPOSE ps
 ```
 
 试用阶段不要求所有服务显示 `healthy`，但至少应看到目标服务处于运行状态。Caddy 不会申请 Let's Encrypt 证书。
@@ -338,8 +353,8 @@ docker compose ps
 ### 5.1 容器与入口
 
 ```bash
-docker compose ps
-docker compose logs --tail=100 caddy
+$COMPOSE ps
+$COMPOSE logs --tail=100 caddy
 curl -I http://<vps-ip>/
 ```
 
@@ -358,7 +373,7 @@ curl -I http://<vps-ip>/
 5. 查看 worker 日志确认 ingestion 完成：
 
 ```bash
-docker compose logs -f worker
+$COMPOSE logs -f worker
 ```
 
 6. 进入 Chat 提问，验证回答流式输出。
@@ -389,10 +404,10 @@ cd /opt/devbrain
 git fetch --depth=1 origin <NEW_SHA>
 git checkout <NEW_SHA>
 nano .env
-docker compose pull api web worker
-docker compose run --rm migrate
-docker compose up -d api web worker
-docker compose ps
+$COMPOSE pull postgres api web worker
+$COMPOSE run --rm migrate
+$COMPOSE up -d api web worker
+$COMPOSE ps
 ```
 
 `.env` 中只更新 `IMAGE_TAG=sha-<NEW_SHA>`。迁移必须先于应用重启。
@@ -403,9 +418,9 @@ docker compose ps
 cd /opt/devbrain
 git checkout <PREVIOUS_SHA>
 nano .env
-docker compose pull api web worker
-docker compose up -d api web worker
-docker compose ps
+$COMPOSE pull postgres api web worker
+$COMPOSE up -d api web worker
+$COMPOSE ps
 ```
 
 如果新版本已经执行破坏性 migration，不能只回滚镜像；必须先按第 6.4 节恢复数据库。
@@ -414,11 +429,11 @@ docker compose ps
 
 | 现象                        | 第一入口                                                                                        |
 | --------------------------- | ----------------------------------------------------------------------------------------------- |
-| `http://<vps-ip>/` 访问失败 | `docker compose logs caddy`、`docker compose ps`、`sudo ufw status`                             |
-| 502                         | `docker compose logs caddy`、`docker compose logs web api`                                      |
+| `http://<vps-ip>/` 访问失败 | `$COMPOSE logs caddy`、`$COMPOSE ps`、`sudo ufw status`                                         |
+| 502                         | `$COMPOSE logs caddy`、`$COMPOSE logs web api`                                                  |
 | 登录失败                    | 检查 `JWT_*`、`REFRESH_TOKEN_PEPPER`、`AUTH_COOKIE_SECURE=false`、`CORS_ORIGIN=http://<vps-ip>` |
-| 上传后文档不处理            | `docker compose logs worker`、`docker compose logs redis`                                       |
-| 检索或生成失败              | `docker compose logs api worker`，检查 `DASHSCOPE_API_KEY` 和 provider 配置                     |
+| 上传后文档不处理            | `$COMPOSE logs worker`、`$COMPOSE logs redis`                                                   |
+| 检索或生成失败              | `$COMPOSE logs api worker`，检查 `DASHSCOPE_API_KEY` 和 provider 配置                           |
 | streaming 卡顿              | 确认 Caddyfile 的 `/api/*` 代理包含 `flush_interval -1`                                         |
 | 公网可访问 3000/3001        | 立刻修正 compose 端口绑定或防火墙规则，只保留 80 公网入口                                       |
 
@@ -427,13 +442,13 @@ docker compose ps
 恢复前先停应用写入：
 
 ```bash
-docker compose stop api web worker
+$COMPOSE stop api web worker
 ```
 
 按备份文件所在位置选择恢复方式。恢复完成后再启动应用：
 
 ```bash
-docker compose start api web worker
+$COMPOSE start api web worker
 ```
 
 恢复后必须重新跑第 5.2 节端到端冒烟。
