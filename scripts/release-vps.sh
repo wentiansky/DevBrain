@@ -162,15 +162,17 @@ die() {
 
 cd $REMOTE_PROJECT_DIR
 
-[[ -f docker-compose.yml ]] || die "当前目录缺少 docker-compose.yml"
-[[ -f docker-compose.prod.yml ]] || die "当前目录缺少 docker-compose.prod.yml"
 [[ -f .env ]] || die "当前目录缺少 .env"
-
-COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml)
+[[ -d .git ]] || die "当前目录不是 git 仓库"
 
 log "拉取 git ref: $GIT_REF"
 git fetch --depth=1 origin $REMOTE_GIT_REF
 git checkout --detach FETCH_HEAD
+
+[[ -f docker-compose.yml ]] || die "当前目录缺少 docker-compose.yml"
+[[ -f docker-compose.prod.yml ]] || die "当前目录缺少 docker-compose.prod.yml"
+
+COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml)
 
 log "更新 .env IMAGE_TAG=$IMAGE_TAG"
 if grep -q '^IMAGE_TAG=' .env; then
