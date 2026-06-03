@@ -280,7 +280,7 @@ curl -I https://devbrain.example.com/ | grep -i cache-control
 
 ## 6.6 接入 Cloudflare CDN（P0 性能优化专项）
 
-跨洲部署（如德国 VPS、国内访问）首屏 LCP 物理上限 ≈ 5s；要进 2.5s 必须由 CDN 提供国内边缘节点。本节记录 Cloudflare 免费档接入步骤与回退预案。
+跨洲部署（如德国 VPS、国内访问）首屏 LCP 物理上限 ≈ 5s；接入 Cloudflare 免费档橙云后，国内用户走**周边节点**（HK / SG / NRT，RTT 80-150ms），LCP 预算降到 **≤ 3.5s**（**非中国大陆边缘 20-50ms**：Cloudflare 在中国大陆境内的边缘节点需要 **Enterprise China Network** 订阅 + **ICP 备案**，不在本 change 范围）。本节记录 Cloudflare 免费档接入步骤与回退预案。
 
 前置条件：
 

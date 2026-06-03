@@ -24,4 +24,4 @@ services:
       - '${CADDY_HTTPS_PORT:-443}:443'
       - '${CADDY_HTTPS_PORT:-443}:443/udp'
     volumes:
-      - ./infra/caddy/${CADDY_CONFIG:-Caddyfile}:/etc/caddy/Caddyfile:ro
+      - ./infra/caddy/${CADDY_CONFIG:-Caddyfile.prod}:/etc/caddy/Caddyfile:ro
