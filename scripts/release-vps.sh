@@ -191,7 +191,7 @@ log "启动数据库与 Redis"
 "\${COMPOSE[@]}" up -d postgres redis
 
 log "执行数据库迁移"
-"\${COMPOSE[@]}" run --rm -T migrate
+"\${COMPOSE[@]}" run --rm -T migrate </dev/null
 
 log "升级业务服务"
 "\${COMPOSE[@]}" up -d api web worker caddy
