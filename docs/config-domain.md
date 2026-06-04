@@ -28,75 +28,52 @@ dig @curitiba.ns.porkbun.com <your-domain>
 
 ---
 
-## 2. 配置 Caddy 域名
+## 2. 切换生产 Caddy 配置
 
-文件：
+当前项目使用双 Caddyfile 方案：
+- `infra/caddy/Caddyfile`：开发/试用环境，`require` 无法解析模板变量，仅用于 `docker compose config` 校验。
+- `infra/caddy/Caddyfile.prod`：生产环境，域名在文件内硬编码，自动申请 Let's Encrypt 证书。
 
-```bash
-/opt/devbrain/infra/caddy/Caddyfile
-```
-
-修改：
-
-```caddy
-:80 {
-```
-
-为：
-
-```caddy
-<your-domain>, www.<your-domain> {
-```
-
-重启：
+在生产 VPS 上执行：
 
 ```bash
-docker restart devbrain-caddy
+cd /opt/devbrain
+# 将 Caddyfile.prod 中的 <your-domain> 替换为你的域名
+sed -i 's/<your-domain>/<your-domain>/g' infra/caddy/Caddyfile.prod
+sed -i 's/www\.<your-domain>/www.<your-domain>/g' infra/caddy/Caddyfile.prod
+
+# 写入 CADDY_CONFIG 到 .env
+echo 'CADDY_CONFIG=Caddyfile.prod' >> .env
+
+# 重启 caddy
+$COMPOSE up -d caddy
+```
+
+验收：
+```bash
+$COMPOSE config | grep caddy
 ```
 
 ---
 
-## 3. 开放 HTTPS 端口
+## 3. 启用生产 Compose 覆盖
 
-文件：
+`docker-compose.prod.yml` 已包含 caddy 443 端口映射和镜像拉取策略，无需手动编辑 `docker-compose.yml`。
 
-```bash
-docker-compose.yml
-```
-
-原配置：
-
-```yaml
-ports:
-  - '${CADDY_HTTP_PORT:-80}:80'
-```
-
-修改为：
-
-```yaml
-ports:
-  - '${CADDY_HTTP_PORT:-80}:80'
-  - '${CADDY_HTTPS_PORT:-443}:443'
-  - '${CADDY_HTTPS_PORT:-443}:443/udp'
-```
-
-重建：
+确认生产 compose 合并无误：
 
 ```bash
-docker compose up -d caddy
-```
-
-验证：
-
-```bash
-docker ps | grep caddy
+cd /opt/devbrain
+$COMPOSE config >/tmp/devbrain-compose.yml
+grep -A3 'caddy:' /tmp/devbrain-compose.yml
 ```
 
 应包含：
 
 ```txt
-0.0.0.0:443->443/tcp
-0.0.0.0:443->443/udp
+- 0.0.0.0:80->80/tcp
+- 0.0.0.0:443->443/tcp
+- 0.0.0.0:443->443/udp
 ```
 
 ---

@@ -208,7 +208,7 @@ $COMPOSE up -d api web worker caddy
 $COMPOSE ps
 ```
 
-> P0 性能优化专项落地后（参见 `openspec/changes/optimize-web-first-load-perf/`），`web` 服务会带 healthcheck，`caddy` 通过 `depends_on: web.condition: service_healthy` 在 Web 就绪后再接流量。**切流前必须确认 `$COMPOSE ps` 输出中 `web`、`api` 状态为 `(healthy)`**，否则用户首请求会撞到 Next.js standalone JIT 冷启动延迟。
+> P0 性能优化专项落地后（参见 `openspec/changes/optimize-web-first-load-perf/`），`web` 和 `api` 服务都带 healthcheck（web 打 `/login` 触发 JIT，api 打 `/readyz` 触发 DB + Redis 探活；均使用 Node 22 内置 `fetch`，无需 curl），`caddy` 通过 `depends_on: { web: condition: service_healthy, api: condition: service_healthy }` 在两者就绪后再接流量。**切流前必须确认 `$COMPOSE ps` 输出中 `web`、`api` 状态都为 `(healthy)`**，否则用户首请求会撞到 Next.js standalone JIT 冷启动延迟。
 
 端口预期：
 
@@ -232,7 +232,8 @@ P0 性能优化专项 `optimize-web-first-load-perf` 启用后，`infra/caddy/` 
 1. 已购买域名，已把 A 记录指向 VPS 公网 IP，`dig <domain> +short` 能解析到 IP。
 2. VPS 防火墙/安全组**同时开放 `80/tcp` 与 `443/tcp`**；ACME HTTP-01 校验依赖 `:80` 可达，浏览器走 `:443`，缺一不可。
 3. 生产启动命令必须带 `docker-compose.prod.yml`，让 caddy 服务包含 `'${CADDY_HTTPS_PORT:-443}:443'`，否则即便 ACME 签发成功，HTTPS 流量也无法到达容器。
-4. `.env` 中追加 `CADDY_CONFIG=Caddyfile.prod`、`WEB_DOMAIN=<生产域名>`、`ACME_EMAIL=<你的邮箱>`。
+4. 生产域名在 `infra/caddy/Caddyfile.prod` 内维护，不需要通过 `.env` 的 `WEB_DOMAIN` / `ACME_EMAIL` 管理。`.env` 中追加 `CADDY_CONFIG=Caddyfile.prod`。
+5. `docker compose ps` 确认 `web (healthy)` 与 `api (healthy)` 同时满足后再接流量。
 
 切换步骤：
 
@@ -240,15 +241,12 @@ P0 性能优化专项 `optimize-web-first-load-perf` 启用后，`infra/caddy/` 
 # 编辑 .env，追加 prod 配置项
 cat >> .env <<'EOF'
 CADDY_CONFIG=Caddyfile.prod
-WEB_DOMAIN=devbrain.example.com
-ACME_EMAIL=ops@example.com
 EOF
 
-# 校验两份 Caddyfile 语法
+# 校验两份 Caddyfile 语法（prod 域名已在文件内）
 docker run --rm -v $PWD/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
   caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
 docker run --rm \
-  -e WEB_DOMAIN=devbrain.example.com -e ACME_EMAIL=ops@example.com \
   -v $PWD/infra/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro \
   caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
 

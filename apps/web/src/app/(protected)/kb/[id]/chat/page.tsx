@@ -9,6 +9,7 @@ import { ChatInput } from '@/features/chat/chat-input';
 import { ChatEmptyState } from '@/features/chat/chat-empty-state';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api-fetch';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useDocumentList } from '@/features/documents/use-documents';
 import type { ConversationDetailResponse } from '@devbrain/api/client';
 
@@ -86,8 +87,17 @@ export default function ChatPage() {
 
   if (kbLoading) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-muted-foreground">正在加载...</p>
+      <div className="flex flex-1 flex-col min-h-0">
+        <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+          <Skeleton className="h-8 w-16" />
+          <div className="flex-1 space-y-1">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-48" />
+          </div>
+        </div>
+        <div className="flex flex-1 items-center justify-center p-4">
+          <Skeleton className="h-48 w-full max-w-lg rounded-lg" />
+        </div>
       </div>
     );
   }

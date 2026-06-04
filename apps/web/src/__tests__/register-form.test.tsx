@@ -13,11 +13,9 @@ vi.mock('next/navigation', () => ({
 }));
 
 const mockRegister = vi.fn();
-const mockInitialize = vi.fn();
 
 vi.mock('@/lib/api-fetch', () => ({
   authRegister: (...args: [string, string]) => mockRegister(...args),
-  initializeAuth: () => mockInitialize(),
 }));
 
 vi.mock('sonner', () => ({
@@ -40,7 +38,6 @@ beforeEach(() => {
   mockPush.mockReset();
   mockReplace.mockReset();
   mockRegister.mockReset();
-  mockInitialize.mockReset();
 });
 
 describe('RegisterForm - 注册表单组件', () => {
@@ -52,16 +49,16 @@ describe('RegisterForm - 注册表单组件', () => {
     });
 
     expect(mockReplace).toHaveBeenCalledWith('/');
-    expect(screen.queryByText('注册 DevBrain')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('user@example.com')).not.toBeInTheDocument();
   });
 
-  it('未初始化时显示登录验证状态', () => {
-    useAuthStore.setState({ isInitialized: false, user: null });
+  it('渲染注册表单', () => {
+    useAuthStore.setState({ isInitialized: true, user: null });
 
     render(<RegisterForm />);
 
-    expect(screen.getByText('正在验证登录状态...')).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('user@example.com')).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('user@example.com')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('至少 8 个字符')).toBeInTheDocument();
   });
 
   it('提交成功后显示 toast 并跳转到首页', async () => {

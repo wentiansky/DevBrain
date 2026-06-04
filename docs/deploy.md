@@ -32,7 +32,8 @@
 | Better Stack         | 不配置 `BETTERSTACK_HEARTBEAT_URL` | 配置心跳和 Uptime                          |
 | 对象存储             | local adapter + 共享持久化 volume  | 切到 R2 presigned PUT 并 smoke             |
 | 自动备份             | 不作为最小上线门槛                 | 补齐 backup service、R2 上传、restore-test |
-| 健康检测             | 不作为上线门槛                     | 验证 `/healthz`、`/readyz`、HTTPS 证书     |
+| Docker 健康检测      | 已启用，caddy 依赖 web/api healthy | 保持不变                                  |
+| API 就绪检测         | 不作为验证门槛                     | 验证 `/healthz`、`/readyz`、HTTPS 证书     |
 
 安全边界：
 
@@ -342,7 +343,7 @@ $COMPOSE up -d api web worker caddy
 $COMPOSE ps
 ```
 
-试用阶段不要求所有服务显示 `healthy`，但至少应看到目标服务处于运行状态。Caddy 不会申请 Let's Encrypt 证书。
+Docker Compose 已为 `api` 和 `web` 服务配置了容器健康检测，`caddy` 依赖两者 `service_healthy` 后才启动。`$COMPOSE up -d api web worker caddy` 会按序等待；`$COMPOSE ps` 确认 `web (healthy)` 与 `api (healthy)` 均满足后即可接流量。Caddy 不会申请 Let's Encrypt 证书。
 
 ---
 
@@ -360,7 +361,7 @@ curl -I http://<vps-ip>/
 
 预期：
 
-- `postgres`、`redis`、`api`、`web`、`worker`、`caddy` 已启动。
+- `postgres`、`redis` 已启动；`api` 和 `web` 状态为 `(healthy)`；`worker`、`caddy` 已启动。
 - `curl -I http://<vps-ip>/` 返回 HTTP 响应。
 - 公网访问 `http://<vps-ip>:3001` 和 `http://<vps-ip>:3000` 不应成功。
 
@@ -461,8 +462,8 @@ $COMPOSE start api web worker
 
 1. 域名 A 记录指向 VPS 公网 IP。
 2. `sudo ufw allow 443/tcp`。
-3. Caddyfile 从 `:80` 改为 `{$DEVBRAIN_DOMAIN}`。
-4. `.env` 增加 `DEVBRAIN_DOMAIN=<your-domain>`。
+3. 在 `infra/caddy/Caddyfile.prod` 中将域名替换为你的生产域名。
+4. `.env` 增加 `CADDY_CONFIG=Caddyfile.prod`。
 5. `.env` 修改 `CORS_ORIGIN=https://<your-domain>`。
 6. `.env` 修改 `AUTH_COOKIE_SECURE=true`。
 7. 接入 Sentry，并验证测试事件可见。

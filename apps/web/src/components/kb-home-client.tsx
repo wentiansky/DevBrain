@@ -6,22 +6,33 @@ import { KbEmptyState } from '@/features/kb/kb-empty-state';
 import { KbList } from '@/features/kb/kb-list';
 import { KbCreateForm } from '@/features/kb/kb-create-form';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { KbResponse } from '@devbrain/api/client';
 
-export default function ProtectedHomePage() {
+export function KbHomeClient() {
   const { data, isLoading, isError, refetch } = useKnowledgeBases();
   const invalidateList = useInvalidateKbList();
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   const handleCreated = (_kb: KbResponse) => {
+    void _kb;
     invalidateList();
     setShowCreateForm(false);
   };
 
   if (isLoading) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-muted-foreground">正在加载知识库...</p>
+      <div className="mx-auto w-full max-w-3xl px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <Skeleton className="h-8 w-36" />
+          <Skeleton className="h-9 w-28 rounded-md" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Skeleton className="h-28 rounded-lg" />
+          <Skeleton className="h-28 rounded-lg" />
+          <Skeleton className="h-28 rounded-lg" />
+          <Skeleton className="h-28 rounded-lg" />
+        </div>
       </div>
     );
   }

@@ -14,11 +14,9 @@ vi.mock('next/navigation', () => ({
 }));
 
 const mockLogin = vi.fn();
-const mockInitialize = vi.fn();
 
 vi.mock('@/lib/api-fetch', () => ({
   authLogin: (...args: [string, string]) => mockLogin(...args),
-  initializeAuth: () => mockInitialize(),
 }));
 
 vi.mock('sonner', () => ({
@@ -42,7 +40,6 @@ beforeEach(() => {
   mockReplace.mockReset();
   mockGetNext.mockReset().mockReturnValue(null);
   mockLogin.mockReset();
-  mockInitialize.mockReset();
 });
 
 describe('LoginForm - 登录表单组件', () => {
@@ -54,7 +51,7 @@ describe('LoginForm - 登录表单组件', () => {
     });
 
     expect(mockReplace).toHaveBeenCalledWith('/');
-    expect(screen.queryByText('登录 DevBrain')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('user@example.com')).not.toBeInTheDocument();
   });
 
   it('user 存在且携带 next 参数时跳转到 next', async () => {
@@ -79,13 +76,13 @@ describe('LoginForm - 登录表单组件', () => {
     expect(mockReplace).toHaveBeenCalledWith('/');
   });
 
-  it('未初始化时显示登录验证状态', () => {
-    useAuthStore.setState({ isInitialized: false, user: null });
+  it('渲染登录表单', () => {
+    useAuthStore.setState({ isInitialized: true, user: null });
 
     render(<LoginForm />);
 
-    expect(screen.getByText('正在验证登录状态...')).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('user@example.com')).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('user@example.com')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('输入密码')).toBeInTheDocument();
   });
 
   it('提交成功后显示 toast 并跳转', async () => {

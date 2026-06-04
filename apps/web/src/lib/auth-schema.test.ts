@@ -1,93 +1,70 @@
 import { describe, it, expect } from 'vitest';
-import { loginSchema, registerSchema } from './auth-schema';
+import { validateLogin, validateRegister } from './auth-schema';
 
-describe('auth schemas', () => {
-  describe('loginSchema', () => {
-    it('should accept valid email and password', () => {
-      const result = loginSchema.safeParse({ email: 'user@example.com', password: 'password123' });
-      expect(result.success).toBe(true);
+describe('auth validation', () => {
+  describe('validateLogin', () => {
+    it('有效邮箱和密码应通过', () => {
+      const result = validateLogin({ email: 'user@example.com', password: 'password123' });
+      expect(Object.keys(result)).toHaveLength(0);
     });
 
-    it('should reject empty email', () => {
-      const result = loginSchema.safeParse({ email: '', password: 'password123' });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toBe('请输入邮箱');
-      }
+    it('空邮箱应拒绝', () => {
+      const result = validateLogin({ email: '', password: 'password123' });
+      expect(result.email).toBe('请输入邮箱');
     });
 
-    it('should reject invalid email format', () => {
-      const result = loginSchema.safeParse({ email: 'not-an-email', password: 'password123' });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toBe('邮箱格式无效');
-      }
+    it('无效邮箱格式应拒绝', () => {
+      const result = validateLogin({ email: 'not-an-email', password: 'password123' });
+      expect(result.email).toBe('邮箱格式无效');
     });
 
-    it('should reject empty password', () => {
-      const result = loginSchema.safeParse({ email: 'user@example.com', password: '' });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toBe('请输入密码');
-      }
-    });
-
-    it('should reject missing fields', () => {
-      const result = loginSchema.safeParse({});
-      expect(result.success).toBe(false);
+    it('空密码应拒绝', () => {
+      const result = validateLogin({ email: 'user@example.com', password: '' });
+      expect(result.password).toBe('请输入密码');
     });
   });
 
-  describe('registerSchema', () => {
-    it('should accept valid email and password (>= 8 chars)', () => {
-      const result = registerSchema.safeParse({
+  describe('validateRegister', () => {
+    it('有效邮箱和密码 (≥8 字符) 应通过', () => {
+      const result = validateRegister({
         email: 'user@example.com',
         password: 'SecurePass123!',
       });
-      expect(result.success).toBe(true);
+      expect(Object.keys(result)).toHaveLength(0);
     });
 
-    it('should reject password shorter than 8 characters', () => {
-      const result = registerSchema.safeParse({ email: 'user@example.com', password: '1234567' });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toBe('密码至少 8 个字符');
-      }
+    it('密码少于 8 字符应拒绝', () => {
+      const result = validateRegister({ email: 'user@example.com', password: '1234567' });
+      expect(result.password).toBe('密码至少 8 个字符');
     });
 
-    it('should reject password longer than 128 characters', () => {
-      const result = registerSchema.safeParse({
+    it('密码超过 128 字符应拒绝', () => {
+      const result = validateRegister({
         email: 'user@example.com',
         password: 'a'.repeat(129),
       });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toBe('密码最多 128 个字符');
-      }
+      expect(result.password).toBe('密码最多 128 个字符');
     });
 
-    it('should accept password exactly 8 characters', () => {
-      const result = registerSchema.safeParse({
+    it('密码恰好 8 字符应通过', () => {
+      const result = validateRegister({
         email: 'user@example.com',
         password: '12345678',
       });
-      expect(result.success).toBe(true);
+      expect(Object.keys(result)).toHaveLength(0);
     });
 
-    it('should accept password exactly 128 characters', () => {
-      const result = registerSchema.safeParse({
+    it('密码恰好 128 字符应通过', () => {
+      const result = validateRegister({
         email: 'user@example.com',
         password: 'a'.repeat(128),
       });
-      expect(result.success).toBe(true);
+      expect(Object.keys(result)).toHaveLength(0);
     });
 
-    it('should reject invalid email format', () => {
-      const result = registerSchema.safeParse({ email: 'invalid', password: 'SecurePass123!' });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toBe('邮箱格式无效');
-      }
+    it('无效邮箱格式应拒绝', () => {
+      const result = validateRegister({ email: 'invalid', password: 'SecurePass123!' });
+      expect(result.email).toBe('邮箱格式无效');
     });
   });
 });

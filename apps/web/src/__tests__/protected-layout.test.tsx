@@ -1,12 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import ProtectedLayout from '@/app/(protected)/layout';
 import { useAuthStore } from '@/stores/auth-store';
 
-const mockRouterReplace = vi.fn();
-
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: mockRouterReplace }),
+  useRouter: () => ({ replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -28,7 +26,6 @@ beforeEach(() => {
     user: null,
     isInitialized: false,
   });
-  mockRouterReplace.mockReset();
   Object.defineProperty(window, 'location', {
     value: {
       pathname: '/',
@@ -40,8 +37,8 @@ beforeEach(() => {
   });
 });
 
-describe('ProtectedLayout - 路由守卫', () => {
-  it('isInitialized=false 时显示加载状态', () => {
+describe('ProtectedLayout - RSC 静态外壳', () => {
+  it('未初始化时渲染骨架 header 和 main 容器', () => {
     useAuthStore.setState({ isInitialized: false, user: null });
     const { container } = render(
       <ProtectedLayout>
@@ -49,29 +46,43 @@ describe('ProtectedLayout - 路由守卫', () => {
       </ProtectedLayout>,
     );
 
-    expect(screen.getByText('正在加载...')).toBeInTheDocument();
-    expect(screen.queryByTestId('child')).not.toBeInTheDocument();
+    expect(screen.getByText('DevBrain')).toBeInTheDocument();
+    const header = container.querySelector('header');
+    expect(header).toBeInTheDocument();
     const main = container.querySelector('main');
-    expect(main).toBeNull();
+    expect(main).toBeInTheDocument();
   });
 
-  it('isInitialized=true 且 user=null 时显示验证状态并跳转登录页', async () => {
-    useAuthStore.setState({ isInitialized: true, user: null });
+  it('未初始化时不展示纯文本 loading 占位', () => {
+    useAuthStore.setState({ isInitialized: false, user: null });
+    render(
+      <ProtectedLayout>
+        <div>内容</div>
+      </ProtectedLayout>,
+    );
 
-    await act(async () => {
-      render(
-        <ProtectedLayout>
-          <div data-testid="child">内容</div>
-        </ProtectedLayout>,
-      );
+    expect(screen.queryByText('正在加载...')).not.toBeInTheDocument();
+    expect(screen.queryByText('正在验证登录状态...')).not.toBeInTheDocument();
+  });
+
+  it('初始化后无 user 时不渲染 children（ProtectedShell 返回 null 等待 redirect）', () => {
+    useAuthStore.setState({
+      isInitialized: true,
+      accessToken: null,
+      user: null,
     });
 
-    expect(screen.getByText('正在验证登录状态...')).toBeInTheDocument();
+    render(
+      <ProtectedLayout>
+        <div data-testid="child">受保护内容</div>
+      </ProtectedLayout>,
+    );
+
     expect(screen.queryByTestId('child')).not.toBeInTheDocument();
-    expect(mockRouterReplace).toHaveBeenCalled();
+    expect(screen.queryByText('受保护内容')).not.toBeInTheDocument();
   });
 
-  it('isInitialized=true 且 user 存在时渲染受保护内容', () => {
+  it('初始化且有 user 时渲染真实 Header 和 children', () => {
     useAuthStore.setState({
       isInitialized: true,
       accessToken: 'token-abc',
@@ -80,45 +91,12 @@ describe('ProtectedLayout - 路由守卫', () => {
 
     render(
       <ProtectedLayout>
-        <div data-testid="child">内容</div>
-      </ProtectedLayout>,
-    );
-
-    expect(screen.getByText('DevBrain')).toBeInTheDocument();
-    expect(screen.getByTestId('child')).toBeInTheDocument();
-    expect(screen.getByText('内容')).toBeInTheDocument();
-  });
-
-  it('已登录时渲染 Header 和 children', () => {
-    useAuthStore.setState({
-      isInitialized: true,
-      accessToken: 'token-abc',
-      user: mockUser,
-    });
-
-    const { container } = render(
-      <ProtectedLayout>
         <div data-testid="child">受保护内容</div>
       </ProtectedLayout>,
     );
 
-    const header = container.querySelector('header');
-    expect(header).toBeInTheDocument();
+    expect(screen.getByText('Beta')).toBeInTheDocument();
+    expect(screen.getByTestId('child')).toBeInTheDocument();
     expect(screen.getByText('受保护内容')).toBeInTheDocument();
-  });
-
-  it('未登录时调用 initializeAuth', async () => {
-    useAuthStore.setState({ isInitialized: false, user: null });
-
-    await act(async () => {
-      render(
-        <ProtectedLayout>
-          <div>内容</div>
-        </ProtectedLayout>,
-      );
-    });
-
-    const { initializeAuth } = await import('@/lib/api-fetch');
-    expect(initializeAuth).toHaveBeenCalled();
   });
 });

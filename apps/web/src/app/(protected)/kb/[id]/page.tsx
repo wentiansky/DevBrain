@@ -10,6 +10,8 @@ import { MarkdownUpload } from '@/features/documents/markdown-upload';
 import { DocumentList } from '@/features/documents/document-list';
 import { useDocumentList } from '@/features/documents/use-documents';
 
+import { Skeleton } from '@/components/ui/skeleton';
+
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('zh-CN', {
     year: 'numeric',
@@ -34,8 +36,16 @@ export default function KbDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-muted-foreground">正在加载知识库...</p>
+      <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
+        <Skeleton className="h-9 w-24" />
+        <div className="rounded-lg border p-6 space-y-3">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-3 w-48" />
+        </div>
+        <Skeleton className="h-32 w-full rounded-lg" />
+        <Skeleton className="h-48 w-full rounded-lg" />
+        <Skeleton className="h-40 w-full rounded-lg" />
       </div>
     );
   }

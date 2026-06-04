@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import ProtectedHomePage from '@/app/(protected)/page';
+import { KbHomeClient } from '@/components/kb-home-client';
 
 const mockRouterPush = vi.fn();
 
@@ -66,9 +66,9 @@ beforeEach(() => {
   mockRouterPush.mockReset();
 });
 
-describe('KB 首页', () => {
+describe('KbHomeClient', () => {
   it('无 KB 时显示空状态和创建入口', async () => {
-    renderWithQuery(<ProtectedHomePage />);
+    renderWithQuery(<KbHomeClient />);
 
     await waitFor(() => {
       expect(screen.getByText('还没有知识库')).toBeInTheDocument();
@@ -84,7 +84,7 @@ describe('KB 首页', () => {
 
   it('从空状态创建 KB 后不跳转详情页，保留在列表页', async () => {
     const user = userEvent.setup();
-    renderWithQuery(<ProtectedHomePage />);
+    renderWithQuery(<KbHomeClient />);
 
     await waitFor(() => {
       expect(screen.getByText('还没有知识库')).toBeInTheDocument();
@@ -96,7 +96,6 @@ describe('KB 首页', () => {
     const submitButton = screen.getByRole('button', { name: '创建知识库' });
     await user.click(submitButton);
 
-    // 验证没有调用 router.push（不跳转详情页）
     expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
@@ -111,7 +110,7 @@ describe('KB 首页', () => {
       },
     ];
 
-    renderWithQuery(<ProtectedHomePage />);
+    renderWithQuery(<KbHomeClient />);
 
     await waitFor(() => {
       expect(screen.getByText('我的知识库')).toBeInTheDocument();
@@ -124,7 +123,7 @@ describe('KB 首页', () => {
 
   it('列表加载失败显示错误态和重试入口', async () => {
     mockError = true;
-    renderWithQuery(<ProtectedHomePage />);
+    renderWithQuery(<KbHomeClient />);
 
     await waitFor(() => {
       expect(screen.getByText('加载知识库失败')).toBeInTheDocument();
@@ -143,7 +142,7 @@ describe('KB 首页', () => {
       },
     ];
 
-    renderWithQuery(<ProtectedHomePage />);
+    renderWithQuery(<KbHomeClient />);
 
     await waitFor(() => {
       expect(screen.getByText('后端知识库')).toBeInTheDocument();

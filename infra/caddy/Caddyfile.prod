@@ -19,6 +19,17 @@
 	}
 
 	handle {
+		@nextstatic path /_next/static/* /_next/image*
+		header @nextstatic Cache-Control "public, max-age=31536000, immutable"
+
+		@publicassets path /favicon.ico /icon.png /apple-icon.png /robots.txt
+		header @publicassets Cache-Control "public, max-age=86400"
+
+		@html {
+			not path /_next/static/* /_next/image* /favicon.ico /icon.png /apple-icon.png /robots.txt
+		}
+		header @html Cache-Control "private, no-cache"
+
 		reverse_proxy web:3000
 	}
 }

@@ -7,12 +7,12 @@ const AUTH_REFRESH = '/auth/refresh';
 const AUTH_LOGOUT = '/auth/logout';
 const SKIP_REFRESH_HEADER = 'x-skip-refresh';
 
-let refreshPromise: Promise<AuthResponse | null> | null = null;
+let inFlightRefresh: Promise<AuthResponse | null> | null = null;
 
 function shouldRedirectToLogin(): boolean {
   if (typeof window === 'undefined') return false;
   const path = window.location.pathname;
-  if (path === '/login' || path === '/register') return false;
+  if (path === '/' || path === '/login' || path === '/register') return false;
   return true;
 }
 
@@ -47,6 +47,15 @@ async function doRefresh(): Promise<AuthResponse | null> {
   }
 }
 
+export function getOrStartRefresh(): Promise<AuthResponse | null> {
+  if (!inFlightRefresh) {
+    inFlightRefresh = doRefresh().finally(() => {
+      inFlightRefresh = null;
+    });
+  }
+  return inFlightRefresh;
+}
+
 export async function apiFetch<T = unknown>(
   url: string,
   options: RequestInit = {},
@@ -75,13 +84,7 @@ export async function apiFetch<T = unknown>(
   let res = await fetch(url, fetchOptions);
 
   if (res.status === 401 && !isRefreshRequest) {
-    if (!refreshPromise) {
-      refreshPromise = doRefresh().finally(() => {
-        refreshPromise = null;
-      });
-    }
-
-    const result = await refreshPromise;
+    const result = await getOrStartRefresh();
 
     if (result) {
       const newHeaders: Record<string, string> = {
@@ -143,7 +146,7 @@ export async function authRegister(email: string, password: string): Promise<Aut
 }
 
 export async function authRefresh(): Promise<AuthResponse | null> {
-  return doRefresh();
+  return getOrStartRefresh();
 }
 
 export async function authLogout(): Promise<void> {
@@ -158,7 +161,7 @@ export async function authLogout(): Promise<void> {
 }
 
 export async function initializeAuth(): Promise<void> {
-  const result = await authRefresh();
+  const result = await getOrStartRefresh();
   if (!result) {
     useAuthStore.getState().clearAuth();
     if (shouldRedirectToLogin()) {
