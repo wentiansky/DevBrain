@@ -4,8 +4,15 @@ import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 import { initializeAuth } from '@/lib/api-fetch';
+import type { AuthResponse } from '@devbrain/api/client';
 import { Header } from '@/components/header';
 import { Skeleton } from '@/components/ui/skeleton';
+
+declare global {
+  interface Window {
+    __AUTH_PREFETCH__?: Promise<AuthResponse | null>;
+  }
+}
 
 export function ProtectedShell({ children }: { children: ReactNode }) {
   const { isInitialized, user } = useAuthStore();
@@ -13,7 +20,22 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isInitialized) {
-      initializeAuth();
+      const prefetch = typeof window !== 'undefined' ? window.__AUTH_PREFETCH__ : undefined;
+      if (prefetch) {
+        prefetch
+          .then((result) => {
+            if (result?.accessToken) {
+              useAuthStore.getState().setAuth(result);
+            } else {
+              useAuthStore.getState().clearAuth();
+            }
+          })
+          .catch(() => {
+            useAuthStore.getState().clearAuth();
+          });
+      } else {
+        initializeAuth();
+      }
     }
   }, [isInitialized]);
 
@@ -21,7 +43,7 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
     if (isInitialized && !user) {
       const currentPath = window.location.pathname + window.location.search;
       const next = encodeURIComponent(currentPath);
-      router.replace(`/login?next=${next}`);
+      router.replace(`/login?next=${next}&error=session_expired`);
     }
   }, [isInitialized, user, router]);
 
@@ -40,7 +62,7 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
-<main className="flex-1">
+        <main className="flex-1">
           <div className="mx-auto w-full max-w-3xl px-4 py-8">
             <div className="flex items-center justify-between mb-6">
               <Skeleton className="h-8 w-36" />

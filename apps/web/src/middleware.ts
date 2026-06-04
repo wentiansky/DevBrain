@@ -3,14 +3,38 @@ import type { NextRequest } from 'next/server';
 
 const REFRESH_COOKIE_NAME = 'devbrain_refresh';
 
-export function middleware(request: NextRequest) {
-  if (request.nextUrl.pathname !== '/') {
-    return NextResponse.next();
+const AUTH_PATHS = new Set(['/login', '/register']);
+
+const PROTECTED_PREFIXES = ['/kb/'] as const;
+
+const PROTECTED_EXACT = new Set<string>(['/']);
+
+function isAuthPath(pathname: string): boolean {
+  return AUTH_PATHS.has(pathname);
+}
+
+function isProtectedPath(pathname: string): boolean {
+  if (PROTECTED_EXACT.has(pathname)) return true;
+  for (const prefix of PROTECTED_PREFIXES) {
+    if (pathname.startsWith(prefix)) return true;
   }
+  return false;
+}
 
-  const hasRefreshToken = request.cookies.has(REFRESH_COOKIE_NAME);
+function safeEncodeURIComponent(value: string): string {
+  return encodeURIComponent(value).replace(/%2F/g, '/');
+}
 
-  if (hasRefreshToken) {
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const hasRefresh = request.cookies.has(REFRESH_COOKIE_NAME);
+  const errorParam = request.nextUrl.searchParams.get('error');
+
+  if (isAuthPath(pathname)) {
+    if (hasRefresh && errorParam !== 'session_expired') {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+
     const response = NextResponse.next();
     response.headers.set(
       'Cache-Control',
@@ -19,22 +43,23 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  const response = NextResponse.next();
-  response.headers.set(
-    'Cache-Control',
-    'public, max-age=0, s-maxage=300, stale-while-revalidate=1800',
-  );
-  response.headers.set(
-    'CDN-Cache-Control',
-    'public, max-age=300, stale-while-revalidate=1800',
-  );
-  response.headers.set(
-    'Cloudflare-CDN-Cache-Control',
-    'public, max-age=300, stale-while-revalidate=1800',
-  );
-  return response;
+  if (isProtectedPath(pathname)) {
+    if (!hasRefresh) {
+      const next = safeEncodeURIComponent(pathname + request.nextUrl.search);
+      return NextResponse.redirect(new URL(`/login?next=${next}`, request.url));
+    }
+
+    const response = NextResponse.next();
+    response.headers.set(
+      'Cache-Control',
+      'private, no-cache, no-store, must-revalidate',
+    );
+    return response;
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: '/',
+  matcher: ['/((?!api/|auth/|storage/|_next/static|_next/image|favicon\\.ico).*)'],
 };

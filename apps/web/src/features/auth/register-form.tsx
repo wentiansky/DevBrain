@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { validateRegister, type RegisterInput } from '@/lib/auth-schema';
@@ -17,6 +17,12 @@ export function RegisterForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof RegisterInput, string>>>({});
   const [values, setValues] = useState<RegisterInput>({ email: '', password: '' });
+
+  useEffect(() => {
+    if (user) {
+      router.replace('/');
+    }
+  }, [user, router]);
 
   if (user) {
     return null;
@@ -41,10 +47,7 @@ export function RegisterForm() {
     try {
       await authRegister(values.email, values.password);
       toast.success('注册成功，欢迎使用 DevBrain');
-      const pathname = window.location.pathname;
-      if (pathname !== '/') {
-        router.push('/');
-      }
+      router.push('/');
     } catch (err) {
       const message =
         err instanceof Error ? err.message : '注册失败，请稍后重试';

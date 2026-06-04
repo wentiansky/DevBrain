@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { validateLogin, type LoginInput } from '@/lib/auth-schema';
@@ -26,6 +26,13 @@ export function LoginForm() {
   const [errors, setErrors] = useState<Partial<Record<keyof LoginInput, string>>>({});
   const [values, setValues] = useState<LoginInput>({ email: '', password: '' });
 
+  useEffect(() => {
+    if (user) {
+      const safeNext = toSafeNext(searchParams.get('next'));
+      router.replace(safeNext);
+    }
+  }, [user, router, searchParams]);
+
   if (user) {
     return null;
   }
@@ -49,11 +56,8 @@ export function LoginForm() {
     try {
       await authLogin(values.email, values.password);
       toast.success('登录成功');
-      const pathname = window.location.pathname;
-      if (pathname !== '/') {
-        const next = toSafeNext(searchParams.get('next'));
-        router.push(next);
-      }
+      const next = toSafeNext(searchParams.get('next'));
+      router.push(next);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : '登录失败，请稍后重试';

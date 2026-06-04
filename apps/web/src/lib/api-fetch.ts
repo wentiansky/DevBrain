@@ -13,7 +13,7 @@ let initializing = false;
 function shouldRedirectToLogin(): boolean {
   if (typeof window === 'undefined') return false;
   const path = window.location.pathname;
-  if (path === '/' || path === '/login' || path === '/register') return false;
+  if (path === '/login' || path === '/register') return false;
   return true;
 }
 
@@ -21,7 +21,7 @@ function redirectToLogin(): void {
   if (!shouldRedirectToLogin()) return;
   const currentPath = window.location.pathname + window.location.search;
   const next = encodeURIComponent(currentPath);
-  window.location.href = `/login?next=${next}`;
+  window.location.href = `/login?next=${next}&error=session_expired`;
 }
 
 function isAnonymousAuthEndpoint(url: string): boolean {
@@ -172,9 +172,6 @@ export async function initializeAuth(): Promise<void> {
     const result = await getOrStartRefresh();
     if (!result) {
       useAuthStore.getState().clearAuth();
-      if (shouldRedirectToLogin()) {
-        redirectToLogin();
-      }
     }
   } finally {
     initializing = false;
