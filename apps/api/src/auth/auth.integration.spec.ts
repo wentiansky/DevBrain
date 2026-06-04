@@ -304,8 +304,8 @@ describe('Auth API 集成测试', () => {
       expect(res.body.user.email).toBe('refresh1@test.local');
     });
 
-    itIfDb('无 refresh cookie 应返回 401', async () => {
-      await request(app.getHttpServer()).post('/auth/refresh').expect(401);
+    itIfDb('无 refresh cookie 应返回 200（未认证用户正常返回）', async () => {
+      await request(app.getHttpServer()).post('/auth/refresh').expect(200);
     });
 
     itIfDb('旧 refresh token 重放应 revoke family', async () => {

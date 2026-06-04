@@ -22,11 +22,11 @@
 		@nextstatic path /_next/static/* /_next/image*
 		header @nextstatic Cache-Control "public, max-age=31536000, immutable"
 
-		@publicassets path /favicon.ico /icon.png /apple-icon.png /robots.txt
-		header @publicassets Cache-Control "public, max-age=86400"
+		@publicassets path /favicon.ico /favicon.svg /icon.png /apple-icon.png /robots.txt
+		header @publicassets Cache-Control "public, max-age=31536000, immutable"
 
 		@html {
-			not path /_next/static/* /_next/image* /favicon.ico /icon.png /apple-icon.png /robots.txt
+			not path /_next/static/* /_next/image* /favicon.ico /favicon.svg /icon.png /apple-icon.png /robots.txt
 		}
 		header @html Cache-Control "private, no-cache"
 

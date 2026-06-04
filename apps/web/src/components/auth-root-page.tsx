@@ -1,13 +1,25 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useAuthStore } from '@/stores/auth-store';
 import { initializeAuth } from '@/lib/api-fetch';
-import { Header } from '@/components/header';
-import { KbHomeClient } from '@/components/kb-home-client';
-import { AuthPageShell } from '@/features/auth/auth-page-shell';
-import { LoginForm } from '@/features/auth/login-form';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const LoginForm = dynamic(
+  () => import('@/features/auth/login-form').then((m) => ({ default: m.LoginForm })),
+  { ssr: false, loading: LoginFormSkeleton },
+);
+
+const Header = dynamic(
+  () => import('@/components/header').then((m) => ({ default: m.Header })),
+  { ssr: false },
+);
+
+const KbHomeClient = dynamic(
+  () => import('@/components/kb-home-client').then((m) => ({ default: m.KbHomeClient })),
+  { ssr: false },
+);
 
 function AuthLoadingShell() {
   return (
@@ -84,25 +96,26 @@ export function AuthRootPage() {
 
   return (
     <div className="flex min-h-svh items-center justify-center px-4">
-      <Suspense
-        fallback={
-          <AuthPageShell
-            title="登录 DevBrain"
-            description="输入邮箱和密码登录你的知识库"
-            footerLink={{ text: '还没有账号？', label: '立即注册', href: '/register' }}
+      <div className="mx-auto w-full max-w-sm space-y-6">
+        <div className="space-y-2 text-center">
+          <h1 className="text-3xl font-bold">登录 DevBrain</h1>
+          <p className="text-sm text-muted-foreground">
+            输入邮箱和密码登录你的知识库
+          </p>
+        </div>
+
+        <LoginForm />
+
+        <p className="text-center text-sm text-muted-foreground">
+          还没有账号？
+          <a
+            href="/register"
+            className="ml-1 underline underline-offset-4 hover:text-primary"
           >
-            <LoginFormSkeleton />
-          </AuthPageShell>
-        }
-      >
-        <AuthPageShell
-          title="登录 DevBrain"
-          description="输入邮箱和密码登录你的知识库"
-          footerLink={{ text: '还没有账号？', label: '立即注册', href: '/register' }}
-        >
-          <LoginForm />
-        </AuthPageShell>
-      </Suspense>
+            立即注册
+          </a>
+        </p>
+      </div>
     </div>
   );
 }

@@ -8,6 +8,7 @@ const AUTH_LOGOUT = '/auth/logout';
 const SKIP_REFRESH_HEADER = 'x-skip-refresh';
 
 let inFlightRefresh: Promise<AuthResponse | null> | null = null;
+let initializing = false;
 
 function shouldRedirectToLogin(): boolean {
   if (typeof window === 'undefined') return false;
@@ -40,7 +41,11 @@ async function doRefresh(): Promise<AuthResponse | null> {
     }
 
     const data: AuthResponse = await res.json();
-    useAuthStore.getState().setAuth(data);
+    if (data.accessToken) {
+      useAuthStore.getState().setAuth(data);
+    } else {
+      useAuthStore.getState().clearAuth();
+    }
     return data;
   } catch {
     return null;
@@ -161,12 +166,18 @@ export async function authLogout(): Promise<void> {
 }
 
 export async function initializeAuth(): Promise<void> {
-  const result = await getOrStartRefresh();
-  if (!result) {
-    useAuthStore.getState().clearAuth();
-    if (shouldRedirectToLogin()) {
-      redirectToLogin();
+  if (initializing) return;
+  initializing = true;
+  try {
+    const result = await getOrStartRefresh();
+    if (!result) {
+      useAuthStore.getState().clearAuth();
+      if (shouldRedirectToLogin()) {
+        redirectToLogin();
+      }
     }
+  } finally {
+    initializing = false;
   }
 }
 

@@ -199,7 +199,8 @@ export class AuthService {
       | undefined;
 
     if (!opaqueToken) {
-      throw new UnauthorizedException('缺少 refresh token');
+      res.status(200).json({});
+      return;
     }
 
     const tokenHash = this.tokenService.hashRefreshToken(opaqueToken);

@@ -55,7 +55,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '刷新 access token（需要 refresh cookie）' })
   @ApiResponse({ status: 200, description: '刷新成功', type: AuthResponse })
-  @ApiResponse({ status: 401, description: 'refresh token 无效或已过期' })
+  @ApiResponse({ status: 200, description: '无 cookie 时返回空对象，表示未认证' })
   @ApiResponse({ status: 429, description: '请求过于频繁' })
   async refresh(
     @Req() req: Request,
