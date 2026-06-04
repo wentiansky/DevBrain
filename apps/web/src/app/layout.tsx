@@ -19,7 +19,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
+  const t0 = Date.now();
+  const result = (
     <html lang="zh-CN" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
@@ -27,4 +28,7 @@ export default function RootLayout({
       </body>
     </html>
   );
+  const t1 = Date.now();
+  console.log(`[SSR-TIMING] RootLayout render: ${t1 - t0}ms`);
+  return result;
 }
