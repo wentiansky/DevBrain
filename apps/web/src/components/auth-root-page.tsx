@@ -4,22 +4,33 @@ import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuthStore } from '@/stores/auth-store';
 import { initializeAuth } from '@/lib/api-fetch';
+import { Header } from '@/components/header';
+import { LoginForm } from '@/features/auth/login-form';
 import { Skeleton } from '@/components/ui/skeleton';
-
-const LoginForm = dynamic(
-  () => import('@/features/auth/login-form').then((m) => ({ default: m.LoginForm })),
-  { ssr: false, loading: LoginFormSkeleton },
-);
-
-const Header = dynamic(
-  () => import('@/components/header').then((m) => ({ default: m.Header })),
-  { ssr: false },
-);
 
 const KbHomeClient = dynamic(
   () => import('@/components/kb-home-client').then((m) => ({ default: m.KbHomeClient })),
-  { ssr: false },
+  { ssr: false, loading: KbHomeClientSkeleton },
 );
+
+function KbHomeClientSkeleton() {
+  return (
+    <main className="flex-1">
+      <div className="mx-auto w-full max-w-3xl px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <Skeleton className="h-8 w-36" />
+          <Skeleton className="h-9 w-28 rounded-md" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Skeleton className="h-28 rounded-lg" />
+          <Skeleton className="h-28 rounded-lg" />
+          <Skeleton className="h-28 rounded-lg" />
+          <Skeleton className="h-28 rounded-lg" />
+        </div>
+      </div>
+    </main>
+  );
+}
 
 function AuthLoadingShell() {
   return (
@@ -54,22 +65,6 @@ function AuthLoadingShell() {
   );
 }
 
-function LoginFormSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-10" />
-        <Skeleton className="h-9 w-full rounded-md" />
-      </div>
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-10" />
-        <Skeleton className="h-9 w-full rounded-md" />
-      </div>
-      <Skeleton className="h-9 w-full rounded-md" />
-    </div>
-  );
-}
-
 export function AuthRootPage() {
   const { isInitialized, user } = useAuthStore();
 
@@ -87,9 +82,7 @@ export function AuthRootPage() {
     return (
       <>
         <Header />
-        <main className="flex-1">
-          <KbHomeClient />
-        </main>
+        <KbHomeClient />
       </>
     );
   }

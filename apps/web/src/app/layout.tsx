@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Providers } from '@/providers';
-import { WebVitals } from '@/components/web-vitals-dynamic';
+import { WebVitals } from '@/components/web-vitals-client';
 import './globals.css';
 
 export const metadata: Metadata = {

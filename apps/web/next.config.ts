@@ -4,6 +4,16 @@ const API_URL = process.env.API_URL ?? 'http://localhost:3001';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-dropdown-menu',
+      'sonner',
+      'next-themes',
+    ],
+  },
+
   async rewrites() {
     return [
       {
