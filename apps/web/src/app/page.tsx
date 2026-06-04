@@ -1,9 +1,21 @@
+import { cookies } from 'next/headers';
 import { AuthRootPage } from '@/components/auth-root-page';
 
-export default function RootPage() {
-  const t0 = Date.now();
-  const result = <AuthRootPage />;
-  const t1 = Date.now();
-  console.log(`[SSR-TIMING] RootPage render: ${t1 - t0}ms`);
-  return result;
+export default async function RootPage() {
+  const cookieStore = await cookies();
+  const hasRefreshCookie = cookieStore.has('devbrain_refresh');
+
+  return (
+    <>
+      {hasRefreshCookie && (
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `window.__AUTH_PREFETCH__=fetch('/auth/refresh',{method:'POST',credentials:'include',headers:{'x-skip-refresh':'1'}}).then(function(r){return r.ok?r.json():null}).catch(function(){return null});`,
+          }}
+        />
+      )}
+      <AuthRootPage hasRefreshCookie={hasRefreshCookie} />
+    </>
+  );
 }
