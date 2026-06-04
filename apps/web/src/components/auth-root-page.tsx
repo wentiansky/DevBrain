@@ -140,21 +140,21 @@ export function AuthRootPage({ hasRefreshCookie }: AuthRootPageProps) {
     }
   }, [isInitialized, hasRefreshCookie]);
 
-  if (!hasRefreshCookie) {
-    return <UnauthenticatedHome />;
-  }
-
-  if (!isInitialized) {
-    return <AuthMinimalShell />;
-  }
-
-  if (user) {
+  if (isInitialized && user) {
     return (
       <>
         <Header />
         <KbHomeClient />
       </>
     );
+  }
+
+  if (!hasRefreshCookie) {
+    return <UnauthenticatedHome />;
+  }
+
+  if (!isInitialized) {
+    return <AuthMinimalShell />;
   }
 
   return <UnauthenticatedHome />;

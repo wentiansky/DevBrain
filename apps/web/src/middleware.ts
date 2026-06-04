@@ -22,7 +22,7 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next();
   response.headers.set(
     'Cache-Control',
-    'public, max-age=14400, s-maxage=300, stale-while-revalidate=1800',
+    'public, max-age=0, s-maxage=300, stale-while-revalidate=1800',
   );
   response.headers.set(
     'CDN-Cache-Control',

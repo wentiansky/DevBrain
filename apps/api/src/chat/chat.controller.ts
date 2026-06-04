@@ -29,6 +29,10 @@ import {
 } from './dto/chat-response.dto';
 import type { User } from '@devbrain/db';
 
+type FlushableResponse = Response & {
+  flush?: () => void;
+};
+
 @ApiTags('Chat')
 @Controller('kbs')
 @UseGuards(JwtAuthGuard)
@@ -77,6 +81,11 @@ export class ChatController {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
+    const socket = res.socket;
+    if (socket) {
+      socket.setNoDelay(true);
+    }
+
     try {
       const stream = this.chatService.streamChat(
         user.id,
@@ -89,10 +98,12 @@ export class ChatController {
       for await (const event of stream) {
         const data = JSON.stringify(event);
         res.write(`data: ${data}\n\n`);
+        (res as FlushableResponse).flush?.();
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : '服务器内部错误';
       res.write(`data: ${JSON.stringify({ type: 'error', code: 'server_error', message })}\n\n`);
+      (res as FlushableResponse).flush?.();
     }
 
     res.end();

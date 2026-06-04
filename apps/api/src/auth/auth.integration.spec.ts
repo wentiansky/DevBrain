@@ -154,7 +154,7 @@ describe('Auth API 集成测试', () => {
       expect(cookieStr).toContain('devbrain_refresh=');
       expect(cookieStr).toContain('HttpOnly');
       expect(cookieStr).toContain('SameSite=Strict');
-      expect(cookieStr).toContain('Path=/auth');
+      expect(cookieStr).toContain('Path=/');
     });
   });
 
@@ -204,7 +204,7 @@ describe('Auth API 集成测试', () => {
       expect(cookieStr).toContain('devbrain_refresh=');
       expect(cookieStr).toContain('HttpOnly');
       expect(cookieStr).toContain('SameSite=Strict');
-      expect(cookieStr).toContain('Path=/auth');
+      expect(cookieStr).toContain('Path=/');
     });
 
     itIfDb('disabled 用户应拒绝登录', async () => {

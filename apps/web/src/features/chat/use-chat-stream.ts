@@ -80,7 +80,7 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
       abortRef.current = abortController;
 
       try {
-        const res = await fetch(`/api/kbs/${kbId}/chat`, {
+        const res = await fetch(chatStreamUrl(kbId), {
           method: 'POST',
           credentials: 'include',
           headers: {
@@ -231,6 +231,19 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
     loadHistory,
     clearRejection: () => setRejectionCode(null),
   };
+}
+
+function chatStreamUrl(kbId: string): string {
+  const configuredBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+  const devBaseUrl =
+    process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : '';
+  const baseUrl = configuredBaseUrl ?? devBaseUrl;
+
+  if (!baseUrl) {
+    return `/api/kbs/${kbId}/chat`;
+  }
+
+  return `${baseUrl.replace(/\/$/, '')}/kbs/${kbId}/chat`;
 }
 
 function authHeaders(): Record<string, string> {

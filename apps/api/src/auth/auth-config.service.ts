@@ -64,7 +64,7 @@ export class AuthConfigService {
       refreshTokenTtlSeconds: refreshTtl,
       refreshTokenPepper: pepper ?? DEV_DEFAULT_PEPPER,
       cookieName: process.env.AUTH_COOKIE_NAME ?? 'devbrain_refresh',
-      cookiePath: process.env.AUTH_COOKIE_PATH ?? '/auth',
+      cookiePath: process.env.AUTH_COOKIE_PATH ?? '/',
       cookieSecure:
         process.env.AUTH_COOKIE_SECURE === 'true'
           ? true

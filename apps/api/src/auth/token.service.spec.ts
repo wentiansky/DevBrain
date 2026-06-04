@@ -170,7 +170,7 @@ describe('TokenService', () => {
       const options = tokenService.getCookieOptions();
       expect(options.httpOnly).toBe(true);
       expect(options.sameSite).toBe('strict');
-      expect(options.path).toBe('/auth');
+      expect(options.path).toBe('/');
       expect(options.maxAge).toBe(604800 * 1000);
     });
 

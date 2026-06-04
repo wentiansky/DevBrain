@@ -1,6 +1,4 @@
 <your-domain>, www.<your-domain> {
-	encode zstd gzip
-
 	handle /auth/* {
 		reverse_proxy api:3001
 	}
@@ -19,6 +17,8 @@
 	}
 
 	handle {
+		encode zstd gzip
+
 		@nextstatic path /_next/static/* /_next/image*
 		header @nextstatic Cache-Control "public, max-age=31536000, immutable"
 
