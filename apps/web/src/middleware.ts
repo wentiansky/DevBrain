@@ -22,15 +22,15 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next();
   response.headers.set(
     'Cache-Control',
-    'public, s-maxage=30, stale-while-revalidate=300',
+    'public, max-age=14400, s-maxage=300, stale-while-revalidate=1800',
   );
   response.headers.set(
     'CDN-Cache-Control',
-    'public, max-age=30, stale-while-revalidate=300',
+    'public, max-age=300, stale-while-revalidate=1800',
   );
   response.headers.set(
     'Cloudflare-CDN-Cache-Control',
-    'public, max-age=30, stale-while-revalidate=300',
+    'public, max-age=300, stale-while-revalidate=1800',
   );
   return response;
 }
