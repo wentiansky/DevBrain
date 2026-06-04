@@ -43,7 +43,7 @@ beforeEach(() => {
 });
 
 describe('LoginForm - 登录表单组件', () => {
-  it('user 存在时执行重定向并返回 null', async () => {
+  it('user 存在时执行重定向', async () => {
     useAuthStore.setState({ isInitialized: true, accessToken: 't', user: mockUser });
 
     await act(async () => {
@@ -51,7 +51,6 @@ describe('LoginForm - 登录表单组件', () => {
     });
 
     expect(mockReplace).toHaveBeenCalledWith('/');
-    expect(screen.queryByPlaceholderText('user@example.com')).not.toBeInTheDocument();
   });
 
   it('user 存在且携带 next 参数时跳转到 next', async () => {
@@ -87,7 +86,10 @@ describe('LoginForm - 登录表单组件', () => {
 
   it('提交成功后显示 toast 并跳转', async () => {
     const user = userEvent.setup();
-    mockLogin.mockResolvedValue({ accessToken: 'token', user: mockUser });
+    mockLogin.mockImplementation(async () => {
+      useAuthStore.setState({ accessToken: 'token', user: mockUser });
+      return { accessToken: 'token', user: mockUser };
+    });
     useAuthStore.setState({ isInitialized: true, user: null });
 
     render(<LoginForm />);
@@ -103,14 +105,17 @@ describe('LoginForm - 登录表单组件', () => {
     const { toast } = await import('sonner');
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith('登录成功');
-      expect(mockPush).toHaveBeenCalledWith('/');
+      expect(mockReplace).toHaveBeenCalledWith('/');
     });
   });
 
   it('提交成功后携带 next 参数跳转', async () => {
     const user = userEvent.setup();
     mockGetNext.mockReturnValue('/kb/123');
-    mockLogin.mockResolvedValue({ accessToken: 'token', user: mockUser });
+    mockLogin.mockImplementation(async () => {
+      useAuthStore.setState({ accessToken: 'token', user: mockUser });
+      return { accessToken: 'token', user: mockUser };
+    });
 
     render(<LoginForm />);
 
@@ -119,7 +124,7 @@ describe('LoginForm - 登录表单组件', () => {
     await user.click(screen.getByRole('button', { name: '登录' }));
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/kb/123');
+      expect(mockReplace).toHaveBeenCalledWith('/kb/123');
     });
   });
 

@@ -33,10 +33,6 @@ export function LoginForm() {
     }
   }, [user, router, searchParams]);
 
-  if (user) {
-    return null;
-  }
-
   const handleChange =
     (field: keyof LoginInput) => (e: React.ChangeEvent<HTMLInputElement>) => {
       setValues((prev) => ({ ...prev, [field]: e.target.value }));
@@ -56,8 +52,6 @@ export function LoginForm() {
     try {
       await authLogin(values.email, values.password);
       toast.success('登录成功');
-      const next = toSafeNext(searchParams.get('next'));
-      router.push(next);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : '登录失败，请稍后重试';
