@@ -29,7 +29,11 @@ export function AuthPageShell({
 
       <p className="text-center text-sm text-muted-foreground">
         {footerLink.text}
-        <Link href={footerLink.href} className="ml-1 underline underline-offset-4 hover:text-primary">
+        <Link
+          href={footerLink.href}
+          prefetch={false}
+          className="ml-1 underline underline-offset-4 hover:text-primary"
+        >
           {footerLink.label}
         </Link>
       </p>

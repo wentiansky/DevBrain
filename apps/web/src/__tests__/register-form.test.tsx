@@ -41,7 +41,7 @@ beforeEach(() => {
 });
 
 describe('RegisterForm - 注册表单组件', () => {
-  it('user 存在时执行重定向并返回 null', async () => {
+  it('user 存在时执行重定向', async () => {
     useAuthStore.setState({ isInitialized: true, accessToken: 't', user: mockUser });
 
     await act(async () => {
@@ -49,7 +49,6 @@ describe('RegisterForm - 注册表单组件', () => {
     });
 
     expect(mockReplace).toHaveBeenCalledWith('/');
-    expect(screen.queryByPlaceholderText('user@example.com')).not.toBeInTheDocument();
   });
 
   it('渲染注册表单', () => {

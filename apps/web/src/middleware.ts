@@ -28,10 +28,9 @@ function safeEncodeURIComponent(value: string): string {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasRefresh = request.cookies.has(REFRESH_COOKIE_NAME);
-  const errorParam = request.nextUrl.searchParams.get('error');
 
   if (isAuthPath(pathname)) {
-    if (hasRefresh && errorParam !== 'session_expired') {
+    if (hasRefresh) {
       return NextResponse.redirect(new URL('/', request.url));
     }
 

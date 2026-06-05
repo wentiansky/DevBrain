@@ -167,10 +167,13 @@ R2_SECRET_ACCESS_KEY=
 R2_ENDPOINT=
 R2_BUCKET=
 SENTRY_DSN=
+NEXT_PUBLIC_SENTRY_DSN=
 LANGFUSE_PUBLIC_KEY=
 LANGFUSE_SECRET_KEY=
 BETTERSTACK_HEARTBEAT_URL=
 ```
+
+如果启用浏览器端 Sentry，`NEXT_PUBLIC_SENTRY_DSN` 还必须配置到 GitHub Repository Variables。该值会在 GHCR Web 镜像构建阶段内联进 Next.js 浏览器 bundle，只同步 VPS `.env` 不能让已构建的浏览器端 Sentry 生效。
 
 确认 `.env` 没有进入 git：
 

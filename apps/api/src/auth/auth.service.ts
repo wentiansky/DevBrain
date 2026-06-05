@@ -233,6 +233,7 @@ export class AuthService {
     });
 
     if (!token) {
+      this.clearRefreshCookie(res);
       throw new UnauthorizedException();
     }
 

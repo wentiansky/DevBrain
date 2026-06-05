@@ -24,10 +24,6 @@ export function RegisterForm() {
     }
   }, [user, router]);
 
-  if (user) {
-    return null;
-  }
-
   const handleChange =
     (field: keyof RegisterInput) => (e: React.ChangeEvent<HTMLInputElement>) => {
       setValues((prev) => ({ ...prev, [field]: e.target.value }));

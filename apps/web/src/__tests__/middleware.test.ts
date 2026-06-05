@@ -78,6 +78,16 @@ describe('middleware - 路由认证保护', () => {
       const res = middleware(req);
       expect(isRedirect(res, 'http://localhost:3000/')).toBe(true);
     });
+
+    it('访问 /login?error=session_expired 时也跳转到 /', () => {
+      const req = mockRequest({
+        pathname: '/login',
+        search: '?error=session_expired',
+        hasRefreshCookie: true,
+      });
+      const res = middleware(req);
+      expect(isRedirect(res, 'http://localhost:3000/')).toBe(true);
+    });
   });
 
   describe('已登录用户访问受保护页面', () => {
@@ -117,18 +127,6 @@ describe('middleware - 路由认证保护', () => {
       expect(res.headers.get('Cache-Control')).toBe(
         'private, no-cache, no-store, must-revalidate',
       );
-    });
-  });
-
-  describe('会话过期防循环', () => {
-    it('已登录用户访问 /login?error=session_expired 时放行不跳转', () => {
-      const req = mockRequest({
-        pathname: '/login',
-        search: '?error=session_expired',
-        hasRefreshCookie: true,
-      });
-      const res = middleware(req);
-      expect(isPassThrough(res)).toBe(true);
     });
   });
 

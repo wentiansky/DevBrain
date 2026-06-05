@@ -52,6 +52,8 @@ export function LoginForm() {
     try {
       await authLogin(values.email, values.password);
       toast.success('登录成功');
+      const safeNext = toSafeNext(searchParams.get('next'));
+      router.replace(safeNext);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : '登录失败，请稍后重试';

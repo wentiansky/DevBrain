@@ -58,6 +58,16 @@ jobs:
             type=raw,value=sha-${{ github.sha }}
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: 校验 Web 构建期 Sentry DSN
+        if: matrix.service == 'web'
+        env:
+          NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+        run: |
+          if [ -z "$NEXT_PUBLIC_SENTRY_DSN" ]; then
+            echo "缺少 GitHub Repository Variable：NEXT_PUBLIC_SENTRY_DSN。该值会在 Next.js 构建阶段内联进浏览器 bundle。"
+            exit 1
+          fi
+
       - name: 构建并推送
         uses: docker/build-push-action@v6
         with:

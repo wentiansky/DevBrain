@@ -69,6 +69,8 @@ docker compose run --rm migrate
 
 需要有 `.github/workflows/build-and-push.yml`，触发条件至少包含 `push: branches: [main]` 和 `workflow_dispatch`。
 
+若启用浏览器端 Sentry，上线前必须在 GitHub 仓库的 Repository Variables 配置 `NEXT_PUBLIC_SENTRY_DSN`。这是公开 DSN，不是 token；它会在 Web 镜像构建阶段通过 Docker build arg 内联进 Next.js 浏览器 bundle，不能只依赖 VPS 运行时 `.env` 补齐。
+
 每次构建至少产出四个镜像：
 
 - `ghcr.io/<owner>/devbrain-api:sha-<sha>`
@@ -178,10 +180,11 @@ docker compose exec backup pg_restore --list /backups/devbrain_<date>.dump
 开发机执行：
 
 1. 确认第 1 节前置补齐已经合入 `main`。
-2. 推送 `main` 或手动触发 `build-and-push` workflow。
-3. 等待 workflow 成功，记录本次 commit SHA，后文记为 `<SHA>`。
-4. 在 GHCR 页面确认 `devbrain-api`、`devbrain-web`、`devbrain-worker`、`devbrain-postgres` 四个镜像可被 VPS 拉取。
-5. 为 VPS 创建只读 PAT，权限只需要 `read:packages`。
+2. 若启用浏览器端 Sentry，确认 GitHub Repository Variable `NEXT_PUBLIC_SENTRY_DSN` 已配置；缺失时 Web 镜像构建会失败。
+3. 推送 `main` 或手动触发 `build-and-push` workflow。
+4. 等待 workflow 成功，记录本次 commit SHA，后文记为 `<SHA>`。
+5. 在 GHCR 页面确认 `devbrain-api`、`devbrain-web`、`devbrain-worker`、`devbrain-postgres` 四个镜像可被 VPS 拉取。
+6. 为 VPS 创建只读 PAT，权限只需要 `read:packages`。
 
 ---
 
@@ -296,7 +299,7 @@ nano .env
 | Provider  | `LLM_PROVIDER=qwen`                                                    | 真实 Qwen-Plus                                            |
 | DashScope | `DASHSCOPE_API_KEY`                                                    | 阿里云控制台获取                                          |
 | R2        | `R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`、`R2_ENDPOINT`、`R2_BUCKET` | 试用阶段可留空；恢复完整生产模式前补齐                    |
-| 监控      | `SENTRY_DSN`、`LANGFUSE_*`、`BETTERSTACK_HEARTBEAT_URL`                | 试用阶段留空                                              |
+| 监控      | `SENTRY_DSN`、`NEXT_PUBLIC_SENTRY_DSN`、`LANGFUSE_*`、`BETTERSTACK_HEARTBEAT_URL` | `SENTRY_DSN` 供服务端运行时使用；`NEXT_PUBLIC_SENTRY_DSN` 还必须同步配置到 GitHub Repository Variables，供 Web 镜像构建阶段使用 |
 | 环境      | `NODE_ENV=production`                                                  | 生产运行模式                                              |
 
 确认 `.env` 不会被提交：
