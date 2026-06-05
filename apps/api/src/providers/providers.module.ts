@@ -31,7 +31,7 @@ export const RETRIEVAL_LOW_RELEVANCE_THRESHOLD = 'RETRIEVAL_LOW_RELEVANCE_THRESH
           return createDashScopeEmbeddingProvider({
             apiKey,
             baseUrl: process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com',
-            model: process.env.EMBEDDING_MODEL || 'text-embedding-v3',
+            model: process.env.EMBEDDING_MODEL || 'text-embedding-v4',
             timeoutMs: parseInt(process.env.EMBEDDING_TIMEOUT_MS || '30000', 10),
             batchSize: parseInt(process.env.EMBEDDING_BATCH_SIZE || '10', 10),
           });

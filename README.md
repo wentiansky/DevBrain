@@ -51,7 +51,7 @@ DevBrain 是一个面向开发者的 self-hostable RAG 知识库。它支持上�
 | 缓存/队列        | Redis 7 + BullMQ                                    | 异步文档处理和任务状态管理                                                      |
 | 对象存储         | Cloudflare R2 或 S3 兼容存储                        | P1 生产使用；P0 可通过 local/mock adapter 跑通                                  |
 | LLM 调用         | LangChain.js、Vercel AI SDK、自研 provider router   | LangChain.js 只做 RAG 工具，AI SDK 负责 streaming，provider router 负责模型路由 |
-| Embedding/Rerank | DashScope `text-embedding-v3`、`gte-rerank`         | P0 真实 provider smoke 必须至少跑通一次                                         |
+| Embedding/Rerank | DashScope `text-embedding-v4`、`gte-rerank`         | P0 真实 provider smoke 必须至少跑通一次                                         |
 | 鉴权             | Argon2id、JWT access/refresh、token family rotation | refresh token 只存 SHA-256，cookie 使用 HttpOnly/Secure/SameSite                |
 | 反向代理         | Caddy 2                                             | P1 部署使用，自动 HTTPS                                                         |
 | 部署             | Docker Compose、GHCR pull-by-SHA                    | P1 部署使用，CI 构建镜像，VPS 只拉取镜像并启动                                  |

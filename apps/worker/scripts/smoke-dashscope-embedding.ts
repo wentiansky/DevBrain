@@ -5,7 +5,7 @@
  *   - 设置环境变量 DASHSCOPE_API_KEY
  *   - 确保机器可以访问 https://dashscope.aliyuncs.com
  *   - 可选设置 DASHSCOPE_BASE_URL（默认 https://dashscope.aliyuncs.com）
- *   - 可选设置 EMBEDDING_MODEL（默认 text-embedding-v3）
+ *   - 可选设置 EMBEDDING_MODEL（默认 text-embedding-v4）
  *
  * 运行方式:
  *   pnpm --filter @devbrain/worker smoke:embedding:dashscope
@@ -42,7 +42,7 @@ async function main(): Promise<void> {
   const config = {
     apiKey: apiKey,
     baseUrl: process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com',
-    model: process.env.EMBEDDING_MODEL || 'text-embedding-v3',
+    model: process.env.EMBEDDING_MODEL || 'text-embedding-v4',
     timeoutMs: parseInt(process.env.EMBEDDING_TIMEOUT_MS || '30000', 10),
     batchSize: parseInt(process.env.EMBEDDING_BATCH_SIZE || '10', 10),
   };

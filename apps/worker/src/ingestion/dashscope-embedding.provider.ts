@@ -24,7 +24,7 @@ export function createDashScopeEmbeddingProvider(
   config: DashScopeConfig,
 ): EmbeddingProvider {
   const baseUrl = config.baseUrl || 'https://dashscope.aliyuncs.com';
-  const model = config.model || 'text-embedding-v3';
+  const model = config.model || 'text-embedding-v4';
   const timeoutMs = config.timeoutMs || 30000;
   const batchSize = config.batchSize || 10;
 
@@ -44,6 +44,7 @@ export function createDashScopeEmbeddingProvider(
         body: JSON.stringify({
           model,
           input: texts,
+          dimensions: 1024,
         }),
         signal: controller.signal,
       });
