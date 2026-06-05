@@ -9,6 +9,7 @@ interface ChatInputProps {
   isStreaming: boolean;
   disabled?: boolean;
   placeholder?: string;
+  initialValue?: string;
 }
 
 export function ChatInput({
@@ -16,8 +17,9 @@ export function ChatInput({
   isStreaming,
   disabled = false,
   placeholder = '输入你的问题...',
+  initialValue = '',
 }: ChatInputProps) {
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(initialValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {

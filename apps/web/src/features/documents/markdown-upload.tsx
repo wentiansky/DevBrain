@@ -3,39 +3,36 @@
 import { useState, useRef, useCallback } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { Button } from '@/components/ui/button';
-import { Upload } from 'lucide-react';
+import { Upload, UploadCloud } from 'lucide-react';
 import { presignUpload, createDocument, useInvalidateDocumentList } from './use-documents';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const ALLOWED_EXTS = ['md', 'markdown', 'mdown', 'mkdn', 'mkd', 'mdwn'];
 
 interface MarkdownUploadProps {
   kbId: string;
+  variant?: 'full' | 'compact';
 }
 
-export function MarkdownUpload({ kbId }: MarkdownUploadProps) {
+export function MarkdownUpload({ kbId, variant = 'full' }: MarkdownUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const invalidateDocuments = useInvalidateDocumentList(kbId);
 
-  const handleFileChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
+  const uploadFile = useCallback(
+    async (file: File) => {
       setError(null);
 
       if (file.size > MAX_FILE_SIZE) {
         setError('文件超过 20MB 上限');
-        if (fileInputRef.current) fileInputRef.current.value = '';
         return;
       }
 
       const ext = file.name.split('.').pop()?.toLowerCase();
-      const allowedExts = ['md', 'markdown', 'mdown', 'mkdn', 'mkd', 'mdwn'];
-      if (!ext || !allowedExts.includes(ext)) {
+      if (!ext || !ALLOWED_EXTS.includes(ext)) {
         setError('不支持的文件类型，请上传 Markdown 文件');
-        if (fileInputRef.current) fileInputRef.current.value = '';
         return;
       }
 
@@ -64,7 +61,7 @@ export function MarkdownUpload({ kbId }: MarkdownUploadProps) {
             tags: {
               kbId,
               putStatus: putRes.status,
-              fileExtension: file.name.split('.').pop()?.toLowerCase(),
+              fileExtension: ext,
               sizeBytes: file.size,
             },
           });
@@ -89,7 +86,7 @@ export function MarkdownUpload({ kbId }: MarkdownUploadProps) {
           Sentry.captureException(err instanceof Error ? err : new Error(errMsg), {
             tags: {
               kbId,
-              fileExtension: file.name.split('.').pop()?.toLowerCase(),
+              fileExtension: ext,
               sizeBytes: file.size,
               mimeType: file.type || 'text/markdown',
             },
@@ -97,38 +94,97 @@ export function MarkdownUpload({ kbId }: MarkdownUploadProps) {
         }
       } finally {
         setUploading(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
       }
     },
     [kbId, invalidateDocuments],
   );
 
-  return (
-    <div className="rounded-lg border border-dashed p-8 text-center">
-      <h3 className="text-lg font-semibold">文档上传</h3>
-      <p className="mt-2 text-sm text-muted-foreground">支持 Markdown (.md) 文件，最大 20MB。</p>
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        await uploadFile(file);
+      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    },
+    [uploadFile],
+  );
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".md,.markdown,.mdown,.mkdn,.mkd,.mdwn"
-        onChange={handleFileChange}
-        className="hidden"
-        disabled={uploading}
-        data-testid="markdown-upload-input"
-      />
+  const handleDrop = useCallback(
+    async (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      setDragOver(false);
+      const file = e.dataTransfer.files?.[0];
+      if (file) {
+        await uploadFile(file);
+      }
+    },
+    [uploadFile],
+  );
+
+  const input = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept=".md,.markdown,.mdown,.mkdn,.mkd,.mdwn"
+      onChange={handleFileChange}
+      className="hidden"
+      disabled={uploading}
+      data-testid="markdown-upload-input"
+    />
+  );
+
+  if (variant === 'compact') {
+    return (
+      <div className="flex flex-col items-end gap-1">
+        {input}
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={uploading}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload className="mr-1.5 h-3.5 w-3.5" />
+          {uploading ? '上传中…' : '上传文档'}
+        </Button>
+        {error && <p className="text-xs text-destructive">{error}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!uploading) setDragOver(true);
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={handleDrop}
+      className={`flex flex-col items-center rounded-xl border border-dashed bg-muted/30 px-6 py-12 text-center transition-colors ${
+        dragOver ? 'border-primary bg-primary/5' : 'border-border'
+      }`}
+    >
+      <div className="rounded-full bg-background p-3 shadow-sm ring-1 ring-border">
+        <UploadCloud className="h-6 w-6 text-muted-foreground" />
+      </div>
+      <h3 className="mt-4 text-base font-semibold">上传 Markdown 文档</h3>
+      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+        拖拽文件到此处，或点击下方按钮选择。支持 .md 文件，单个最大 20MB。
+      </p>
+
+      {input}
 
       <Button
-        variant="outline"
-        className="mt-4"
+        variant="default"
+        className="mt-5"
         disabled={uploading}
         onClick={() => fileInputRef.current?.click()}
       >
         <Upload className="mr-2 h-4 w-4" />
-        {uploading ? '上传中...' : '选择文件'}
+        {uploading ? '上传中…' : '选择文件'}
       </Button>
 
-      {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+      {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
     </div>
   );
 }

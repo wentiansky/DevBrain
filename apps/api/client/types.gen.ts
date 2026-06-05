@@ -196,6 +196,14 @@ export type DocumentResponse = {
      */
     errorMessage?: string | null;
     /**
+     * 文件大小（字节）
+     */
+    sizeBytes?: number | null;
+    /**
+     * 分块数
+     */
+    chunkCount?: number;
+    /**
      * 创建时间
      */
     createdAt: string;
@@ -536,10 +544,6 @@ export type AuthControllerRefreshData = {
 
 export type AuthControllerRefreshErrors = {
     /**
-     * refresh token 无效或已过期
-     */
-    401: unknown;
-    /**
      * 请求过于频繁
      */
     429: unknown;
@@ -547,6 +551,8 @@ export type AuthControllerRefreshErrors = {
 
 export type AuthControllerRefreshResponses = {
     /**
+     * 无 cookie 时返回空对象，表示未认证
+     *
      * 刷新成功
      */
     200: AuthResponse;

@@ -78,6 +78,12 @@ export class DocumentResponse {
   @ApiPropertyOptional({ description: '错误信息', type: String, nullable: true })
   errorMessage?: string | null;
 
+  @ApiPropertyOptional({ description: '文件大小（字节）', type: Number, nullable: true })
+  sizeBytes?: number | null;
+
+  @ApiPropertyOptional({ description: '分块数', type: Number })
+  chunkCount?: number;
+
   @ApiProperty({ description: '创建时间' })
   createdAt!: Date;
 

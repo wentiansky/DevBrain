@@ -111,7 +111,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "刷新成功",
+            "description": "无 cookie 时返回空对象，表示未认证\n\n刷新成功",
             "content": {
               "application/json": {
                 "schema": {
@@ -119,9 +119,6 @@
                 }
               }
             }
-          },
-          "401": {
-            "description": "refresh token 无效或已过期"
           },
           "429": {
             "description": "请求过于频繁"
@@ -1033,6 +1030,15 @@
             "type": "string",
             "description": "错误信息",
             "nullable": true
+          },
+          "sizeBytes": {
+            "type": "number",
+            "description": "文件大小（字节）",
+            "nullable": true
+          },
+          "chunkCount": {
+            "type": "number",
+            "description": "分块数"
           },
           "createdAt": {
             "format": "date-time",

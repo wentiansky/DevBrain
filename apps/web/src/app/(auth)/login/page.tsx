@@ -36,7 +36,7 @@ export default function LoginPage() {
         <AuthPageShell
           title="登录 DevBrain"
           description="输入邮箱和密码登录你的知识库"
-          footerLink={{ text: '还没有账号？', label: '立即注册', href: '/register' }}
+          footerLink={{ text: '还没有账号·？', label: '立即注册', href: '/register' }}
         >
           <LoginForm />
         </AuthPageShell>

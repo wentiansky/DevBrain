@@ -15,7 +15,9 @@ import type { Queue } from 'bullmq';
 
 const prisma = getPrismaClient();
 
-function toResponse(doc: Document): DocumentResponse {
+type DocumentWithCount = Document & { _count?: { chunks: number } };
+
+function toResponse(doc: DocumentWithCount): DocumentResponse {
   return {
     id: doc.id,
     kbId: doc.kbId,
@@ -24,6 +26,8 @@ function toResponse(doc: Document): DocumentResponse {
     status: doc.status,
     errorCode: doc.errorCode ?? null,
     errorMessage: doc.errorMessage ?? null,
+    sizeBytes: doc.sizeBytes ?? null,
+    chunkCount: doc._count?.chunks ?? 0,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -136,6 +140,7 @@ export class DocumentsService {
         deletedAt: null,
       },
       orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      include: { _count: { select: { chunks: true } } },
     });
 
     return docs.map(toResponse);
@@ -144,6 +149,7 @@ export class DocumentsService {
   async getById(user: User, documentId: string): Promise<DocumentResponse> {
     const doc = await prisma.document.findUnique({
       where: { id: documentId },
+      include: { _count: { select: { chunks: true } } },
     });
 
     if (!doc || doc.deletedAt) {

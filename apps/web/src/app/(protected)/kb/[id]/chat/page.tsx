@@ -25,6 +25,7 @@ export default function ChatPage() {
   const searchParams = useSearchParams();
   const kbId = params.id as string;
   const conversationIdParam = searchParams.get('conversation');
+  const initialPrompt = searchParams.get('prompt') ?? '';
 
   const { data: kb, isLoading: kbLoading } = useQuery<KbInfo>({
     queryKey: ['kb', kbId],
@@ -165,6 +166,7 @@ export default function ChatPage() {
             }}
             isStreaming={isStreaming}
             disabled={!canChat}
+            initialValue={initialPrompt}
           />
         </>
       )}
