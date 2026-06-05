@@ -1,13 +1,10 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
-import {
-  presignUpload,
-  createDocument,
-  useInvalidateDocumentList,
-} from './use-documents';
+import { presignUpload, createDocument, useInvalidateDocumentList } from './use-documents';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
@@ -62,7 +59,16 @@ export function MarkdownUpload({ kbId }: MarkdownUploadProps) {
         });
 
         if (!putRes.ok) {
-          throw new Error('文件直传失败');
+          const err = new Error('文件直传失败');
+          Sentry.captureException(err, {
+            tags: {
+              kbId,
+              putStatus: putRes.status,
+              fileExtension: file.name.split('.').pop()?.toLowerCase(),
+              sizeBytes: file.size,
+            },
+          });
+          throw err;
         }
 
         await createDocument({
@@ -76,7 +82,19 @@ export function MarkdownUpload({ kbId }: MarkdownUploadProps) {
 
         invalidateDocuments();
       } catch (err) {
-        setError((err as Error).message || '上传失败，请重试');
+        const errMsg = (err as Error).message || '上传失败，请重试';
+        setError(errMsg);
+
+        if (!(err as Error).message?.includes('直传') && errMsg !== '文件直传失败') {
+          Sentry.captureException(err instanceof Error ? err : new Error(errMsg), {
+            tags: {
+              kbId,
+              fileExtension: file.name.split('.').pop()?.toLowerCase(),
+              sizeBytes: file.size,
+              mimeType: file.type || 'text/markdown',
+            },
+          });
+        }
       } finally {
         setUploading(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -88,9 +106,7 @@ export function MarkdownUpload({ kbId }: MarkdownUploadProps) {
   return (
     <div className="rounded-lg border border-dashed p-8 text-center">
       <h3 className="text-lg font-semibold">文档上传</h3>
-      <p className="mt-2 text-sm text-muted-foreground">
-        支持 Markdown (.md) 文件，最大 20MB。
-      </p>
+      <p className="mt-2 text-sm text-muted-foreground">支持 Markdown (.md) 文件，最大 20MB。</p>
 
       <input
         ref={fileInputRef}
@@ -112,9 +128,7 @@ export function MarkdownUpload({ kbId }: MarkdownUploadProps) {
         {uploading ? '上传中...' : '选择文件'}
       </Button>
 
-      {error && (
-        <p className="mt-2 text-sm text-destructive">{error}</p>
-      )}
+      {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
     </div>
   );
 }

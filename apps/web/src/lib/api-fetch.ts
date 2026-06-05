@@ -1,5 +1,7 @@
+import * as Sentry from '@sentry/nextjs';
 import { useAuthStore } from '@/stores/auth-store';
 import type { AuthResponse } from '@devbrain/api/client';
+import { shouldReportHttpError } from './sentry';
 
 const AUTH_LOGIN = '/auth/login';
 const AUTH_REGISTER = '/auth/register';
@@ -61,10 +63,7 @@ export function getOrStartRefresh(): Promise<AuthResponse | null> {
   return inFlightRefresh;
 }
 
-export async function apiFetch<T = unknown>(
-  url: string,
-  options: RequestInit = {},
-): Promise<T> {
+export async function apiFetch<T = unknown>(url: string, options: RequestInit = {}): Promise<T> {
   const { accessToken } = useAuthStore.getState();
   const isRefreshRequest = options.headers
     ? (options.headers as Record<string, string>)[SKIP_REFRESH_HEADER] === '1'
@@ -116,10 +115,20 @@ export async function apiFetch<T = unknown>(
 
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({}));
-    const message =
-      (errorBody as { message?: string }).message || `请求失败 (${res.status})`;
+    const message = (errorBody as { message?: string }).message || `请求失败 (${res.status})`;
     const error = new Error(message) as Error & { status: number };
     error.status = res.status;
+
+    if (shouldReportHttpError(res.status)) {
+      Sentry.captureException(error, {
+        tags: {
+          route: url,
+          status: res.status,
+          method: fetchOptions.method || 'GET',
+        },
+      });
+    }
+
     throw error;
   }
 

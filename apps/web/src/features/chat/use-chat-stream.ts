@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { useAuthStore } from '@/stores/auth-store';
 import type { CitationResponse } from '@devbrain/api/client';
 
@@ -34,22 +35,16 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
   const fetchCitations = useCallback(
     async (conversationId: string, assistantMessageId: string) => {
       try {
-        const res = await fetch(
-          `/api/kbs/${kbId}/conversations/${conversationId}`,
-          { credentials: 'include', headers: authHeaders() },
-        );
+        const res = await fetch(`/api/kbs/${kbId}/conversations/${conversationId}`, {
+          credentials: 'include',
+          headers: authHeaders(),
+        });
         if (!res.ok) return;
         const data = await res.json();
-        const msg = data.messages?.find(
-          (m: ChatMessage) => m.id === assistantMessageId,
-        );
+        const msg = data.messages?.find((m: ChatMessage) => m.id === assistantMessageId);
         if (msg?.citations) {
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMessageId
-                ? { ...m, citations: msg.citations }
-                : m,
-            ),
+            prev.map((m) => (m.id === assistantMessageId ? { ...m, citations: msg.citations } : m)),
           );
         }
       } catch {
@@ -100,13 +95,28 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
           setError(errMsg);
           setIsStreaming(false);
           onError?.(errMsg);
+
+          if (res.status >= 500) {
+            Sentry.captureException(new Error(errMsg), {
+              tags: {
+                route: `/api/kbs/${kbId}/chat`,
+                status: res.status,
+                method: 'POST',
+                kbId,
+              },
+            });
+          }
           return;
         }
 
         const reader = res.body?.getReader();
         if (!reader) {
-          setError('无法读取响应流');
+          const errMsg = '无法读取响应流';
+          setError(errMsg);
           setIsStreaming(false);
+          Sentry.captureException(new Error(errMsg), {
+            tags: { route: `/api/kbs/${kbId}/chat`, kbId },
+          });
           return;
         }
 
@@ -114,6 +124,9 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
         let buffer = '';
         let accumulatedContent = '';
         let ctx: StreamContext | null = null;
+        let parseErrorCount = 0;
+        const MAX_PARSE_ERRORS = 5;
+        let hasReportedParseError = false;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -152,9 +165,18 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
                 setStreamingContent('');
                 return;
               } else if (event.type === 'error') {
-                setError(event.message || '生成回答时出错');
+                const errMsg = event.message || '生成回答时出错';
+                setError(errMsg);
                 setIsStreaming(false);
                 setStreamingContent('');
+                Sentry.captureException(new Error(errMsg), {
+                  tags: {
+                    route: `/api/kbs/${kbId}/chat`,
+                    kbId,
+                    conversationId: ctx?.conversationId,
+                    messageId: ctx?.assistantMessageId,
+                  },
+                });
                 return;
               } else if (event.type === 'done') {
                 const finalCtx = ctx || {
@@ -174,15 +196,22 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
                 setIsStreaming(false);
 
                 if (finalCtx.assistantMessageId && finalCtx.conversationId) {
-                  void fetchCitations(
-                    finalCtx.conversationId,
-                    finalCtx.assistantMessageId,
-                  );
+                  void fetchCitations(finalCtx.conversationId, finalCtx.assistantMessageId);
                 }
                 return;
               }
             } catch {
-              // 忽略解析错误的行
+              parseErrorCount++;
+              if (parseErrorCount >= MAX_PARSE_ERRORS && !hasReportedParseError) {
+                hasReportedParseError = true;
+                Sentry.captureException(new Error('SSE JSON 解析连续失败'), {
+                  tags: {
+                    route: `/api/kbs/${kbId}/chat`,
+                    kbId,
+                    parseErrorCount,
+                  },
+                });
+              }
             }
           }
         }
@@ -196,9 +225,16 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
         setIsStreaming(false);
         setStreamingContent('');
         onError?.(errMsg);
+        Sentry.captureException(err instanceof Error ? err : new Error(errMsg), {
+          tags: {
+            route: `/api/kbs/${kbId}/chat`,
+            kbId,
+            conversationId: streamContext?.conversationId,
+          },
+        });
       }
     },
-    [kbId, isStreaming, fetchCitations, onError],
+    [kbId, isStreaming, fetchCitations, onError, streamContext?.conversationId],
   );
 
   const stopStreaming = useCallback(() => {
@@ -209,14 +245,11 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
 
   const clearError = useCallback(() => setError(null), []);
 
-  const loadHistory = useCallback(
-    (historyMessages: ChatMessage[]) => {
-      setMessages(historyMessages);
-      setRejectionCode(null);
-      setError(null);
-    },
-    [],
-  );
+  const loadHistory = useCallback((historyMessages: ChatMessage[]) => {
+    setMessages(historyMessages);
+    setRejectionCode(null);
+    setError(null);
+  }, []);
 
   return {
     messages,
@@ -235,8 +268,7 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
 
 function chatStreamUrl(kbId: string): string {
   const configuredBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-  const devBaseUrl =
-    process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : '';
+  const devBaseUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : '';
   const baseUrl = configuredBaseUrl ?? devBaseUrl;
 
   if (!baseUrl) {
