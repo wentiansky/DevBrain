@@ -1,6 +1,13 @@
 # DevBrain MVP IP 部署步骤
 
-本文档记录本次已跑通的最小生产 IP 部署流程。当前目标是先用 `http://<vps-ip>/` 给朋友试用，不买域名，不接 Sentry / Langfuse / Better Stack，不启用自动备份。
+本文档记录最小生产 IP 部署流程。当前目标是先用 `http://<vps-ip>/` 给朋友试用，不买域名，不接 Langfuse / Better Stack，不启用自动备份。当前 GHCR workflow 会强制要求 GitHub Repository Variable `NEXT_PUBLIC_SENTRY_DSN`；这是公开浏览器端 DSN，不是 token，也不代表完整监控闭环已经完成。
+
+当前仓库状态（截至 2026-06-05）：
+
+- 已有 `docker-compose.prod.yml`、双 Caddyfile、API/Web healthcheck、GHCR workflow 和 `pnpm release:vps`。
+- GHCR workflow 构建 `api`、`web`、`worker`、`postgres` 四个镜像，不构建 `backup` 镜像。
+- 当前上传仍使用 local storage adapter，通过 API/Worker 共享 `storagedata` volume 跑通；R2 adapter 仍待 P1。
+- Web Vitals 当前只在开发环境 console 输出；生产上报到 Sentry 仍待补齐。
 
 ## 1. 前置条件
 
@@ -10,7 +17,9 @@
   - `ghcr.io/wentiansky/devbrain-api:sha-<SHA>`
   - `ghcr.io/wentiansky/devbrain-web:sha-<SHA>`
   - `ghcr.io/wentiansky/devbrain-worker:sha-<SHA>`
+  - `ghcr.io/wentiansky/devbrain-postgres:sha-<SHA>`
 - GitHub PAT 已创建，权限只需要 `read:packages`。
+- GitHub Repository Variable `NEXT_PUBLIC_SENTRY_DSN` 已配置，否则当前 Web 镜像构建会失败。
 - DashScope API Key 已准备好。
 
 当前试用部署只开放 HTTP 80。安全组或防火墙建议只开放：
@@ -166,14 +175,14 @@ R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 R2_ENDPOINT=
 R2_BUCKET=
-SENTRY_DSN=
 NEXT_PUBLIC_SENTRY_DSN=
+SENTRY_DSN=
 LANGFUSE_PUBLIC_KEY=
 LANGFUSE_SECRET_KEY=
 BETTERSTACK_HEARTBEAT_URL=
 ```
 
-如果启用浏览器端 Sentry，`NEXT_PUBLIC_SENTRY_DSN` 还必须配置到 GitHub Repository Variables。该值会在 GHCR Web 镜像构建阶段内联进 Next.js 浏览器 bundle，只同步 VPS `.env` 不能让已构建的浏览器端 Sentry 生效。
+`NEXT_PUBLIC_SENTRY_DSN` 必须配置到 GitHub Repository Variables。该值会在 GHCR Web 镜像构建阶段内联进 Next.js 浏览器 bundle，只同步 VPS `.env` 不能让已构建的浏览器端 Sentry 生效。VPS `.env` 中的 `NEXT_PUBLIC_SENTRY_DSN` 可留空，因为 standalone Web 镜像已经在构建期拿到该值。
 
 确认 `.env` 没有进入 git：
 
@@ -225,10 +234,10 @@ $COMPOSE ps
 
 P0 性能优化专项 `optimize-web-first-load-perf` 启用后，`infra/caddy/` 下有两份 Caddyfile，由 compose 环境变量 `CADDY_CONFIG` 决定 mount 哪份：
 
-| `CADDY_CONFIG` 值 | mount 文件 | 行为 |
-|---|---|---|
-| 未设置（默认） | `infra/caddy/Caddyfile` | `:80` plain HTTP；适合本地 `pnpm dev` 与 VPS IP 直连 |
-| `Caddyfile.prod` | `infra/caddy/Caddyfile.prod` | 域名 + 自动 ACME + HTTPS + HTTP/2 |
+| `CADDY_CONFIG` 值 | mount 文件                   | 行为                                                 |
+| ----------------- | ---------------------------- | ---------------------------------------------------- |
+| 未设置（默认）    | `infra/caddy/Caddyfile`      | `:80` plain HTTP；适合本地 `pnpm dev` 与 VPS IP 直连 |
+| `Caddyfile.prod`  | `infra/caddy/Caddyfile.prod` | 域名 + 自动 ACME + HTTPS + HTTP/2                    |
 
 前置条件：
 
@@ -389,7 +398,14 @@ $COMPOSE logs -f worker
 
 ## 8. 升级
 
-GitHub Actions 构建成功后，在 VPS 上执行：
+GitHub Actions 构建成功后，已初始化过的 VPS 优先使用发布脚本：
+
+```bash
+pnpm release:vps --dry-run
+pnpm release:vps
+```
+
+手动升级时在 VPS 上执行：
 
 ```bash
 cd /opt/devbrain

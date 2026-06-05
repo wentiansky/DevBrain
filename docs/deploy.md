@@ -1,6 +1,13 @@
 # DevBrain 生产 IP 最小化部署手册
 
-本文档面向 P0 功能闭环已经完成、VPS 已购买、但前期暂不购买域名和暂不接入监控的状态。当前目标是用公网 IP 先跑通真实朋友试用闭环：镜像仍由 GitHub Actions 构建并推送到 GHCR，VPS 只 `docker compose pull` GHCR 镜像，不在 VPS 上构建 Next.js / NestJS / Worker。
+本文档面向 P0 功能闭环已经完成、VPS 已购买、但先用公网 IP 或最小域名配置跑通真实朋友试用闭环的状态。镜像由 GitHub Actions 构建并推送到 GHCR，VPS 只 `docker compose pull` GHCR 镜像，不在 VPS 上构建 Next.js / NestJS / Worker。
+
+当前仓库状态（截至 2026-06-05）：
+
+- 已有 `docker-compose.yml`、`docker-compose.prod.yml`、API/Web/Worker/Postgres Dockerfile、双 Caddyfile、容器 healthcheck 和 `pnpm release:vps`。
+- GHCR workflow 当前构建并推送 `api`、`web`、`worker`、`postgres` 四个镜像，不构建 `backup` 镜像。
+- Web 镜像构建阶段当前会校验 GitHub Repository Variable `NEXT_PUBLIC_SENTRY_DSN`，缺失会让 `web` matrix 构建失败。该值是公开 DSN，不是 token；即使暂不做完整监控，也要配置一个浏览器端 DSN，或先修改 workflow 再构建。
+- 当前代码只有 local storage adapter；试用部署通过 API/Worker 共享持久化 volume 跑通上传。R2 presigned PUT/HEAD adapter 仍是 P1。
 
 阅读顺序：先看第 0 节确认当前部署边界，再完成第 1 节前置补齐，最后按第 2 节开始执行。第 1 节不满足时不要继续上线。
 
@@ -8,32 +15,33 @@
 
 ## 0. 当前部署边界
 
-当前采用“HTTP + 公网 IP”的试用阶段部署：
+当前可采用“HTTP + 公网 IP”的试用阶段部署：
 
 - 暂不买域名，浏览器访问 `http://<vps-ip>/`。
 - 暂不申请 TLS 证书，Caddy 只监听 `:80`。
-- 暂不接入 Sentry、Langfuse、Better Stack。
-- 暂不把 `/healthz`、`/readyz`、数据库连通性探活作为上线门槛。
+- 暂不接入 Langfuse、Better Stack。
+- Sentry 浏览器端 DSN 当前是 GHCR Web 构建门槛；这不等于完整可观测闭环已经完成。
+- API/Web 容器已配置 healthcheck；试用阶段上线门槛仍以端到端浏览器冒烟为准。
 - 仍然使用 GHCR 镜像、Docker Compose、Caddy、Postgres、Redis、Worker。
 - 仍然使用真实 DashScope embedding / rerank / Qwen-Plus 做端到端冒烟。
 - 暂不启动自动 backup 服务；试用阶段仅用于非私密数据，完整生产模式前必须补齐备份和 restore-test。
 
 当前临时例外：
 
-| 项目                 | 试用阶段配置                       | 恢复完整生产模式时                         |
-| -------------------- | ---------------------------------- | ------------------------------------------ |
-| 访问入口             | `http://<vps-ip>/`                 | `https://<your-domain>/`                   |
-| Caddy 站点           | `:80`                              | `{$DEVBRAIN_DOMAIN}`                       |
-| `AUTH_COOKIE_SECURE` | `false`                            | `true`                                     |
-| `CORS_ORIGIN`        | `http://<vps-ip>`                  | `https://<your-domain>`                    |
-| `DEVBRAIN_DOMAIN`    | 不需要配置                         | 配置为真实域名                             |
-| Sentry               | 不配置 `SENTRY_DSN`                | 配置 DSN 并验证测试事件                    |
-| Langfuse             | 不配置 `LANGFUSE_*`                | 配置 key 并验证 trace                      |
-| Better Stack         | 不配置 `BETTERSTACK_HEARTBEAT_URL` | 配置心跳和 Uptime                          |
-| 对象存储             | local adapter + 共享持久化 volume  | 切到 R2 presigned PUT 并 smoke             |
-| 自动备份             | 不作为最小上线门槛                 | 补齐 backup service、R2 上传、restore-test |
-| Docker 健康检测      | 已启用，caddy 依赖 web/api healthy | 保持不变                                  |
-| API 就绪检测         | 不作为验证门槛                     | 验证 `/healthz`、`/readyz`、HTTPS 证书     |
+| 项目                 | 试用阶段配置                                                                  | 恢复完整生产模式时                               |
+| -------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------ |
+| 访问入口             | `http://<vps-ip>/`                                                            | `https://<your-domain>/`                         |
+| Caddy 站点           | `:80`                                                                         | `infra/caddy/Caddyfile.prod` 中的生产域名        |
+| `AUTH_COOKIE_SECURE` | `false`                                                                       | `true`                                           |
+| `CORS_ORIGIN`        | `http://<vps-ip>`                                                             | `https://<your-domain>`                          |
+| `DEVBRAIN_DOMAIN`    | 当前不使用                                                                    | 当前不使用；域名直接维护在 `Caddyfile.prod`      |
+| Sentry               | 至少配置 GitHub Variable `NEXT_PUBLIC_SENTRY_DSN`；运行时 `SENTRY_DSN` 可暂空 | 配置服务端 DSN、浏览器 DSN，并验证测试事件与脱敏 |
+| Langfuse             | 不配置 `LANGFUSE_*`                                                           | 配置 key 并验证 trace                            |
+| Better Stack         | 不配置 `BETTERSTACK_HEARTBEAT_URL`                                            | 配置心跳和 Uptime                                |
+| 对象存储             | local adapter + 共享持久化 volume                                             | 实现并切到 R2 presigned PUT，完成 smoke          |
+| 自动备份             | 不作为最小上线门槛                                                            | 补齐 backup service、R2 上传、restore-test       |
+| Docker 健康检测      | 已启用，caddy 依赖 web/api healthy                                            | 保持不变                                         |
+| API 就绪检测         | 不作为验证门槛                                                                | 验证 `/healthz`、`/readyz`、HTTPS 证书           |
 
 安全边界：
 
@@ -69,14 +77,16 @@ docker compose run --rm migrate
 
 需要有 `.github/workflows/build-and-push.yml`，触发条件至少包含 `push: branches: [main]` 和 `workflow_dispatch`。
 
-若启用浏览器端 Sentry，上线前必须在 GitHub 仓库的 Repository Variables 配置 `NEXT_PUBLIC_SENTRY_DSN`。这是公开 DSN，不是 token；它会在 Web 镜像构建阶段通过 Docker build arg 内联进 Next.js 浏览器 bundle，不能只依赖 VPS 运行时 `.env` 补齐。
+当前 workflow 会在 Web 镜像构建前强制检查 GitHub 仓库的 Repository Variable `NEXT_PUBLIC_SENTRY_DSN`。这是公开 DSN，不是 token；它会在 Web 镜像构建阶段通过 Docker build arg 内联进 Next.js 浏览器 bundle，不能只依赖 VPS 运行时 `.env` 补齐。若确实要完全禁用浏览器端 Sentry，必须先修改 `.github/workflows/build-and-push.yml`，否则 GHCR 构建不会通过。
 
-每次构建至少产出四个镜像：
+每次构建产出四个镜像：
 
 - `ghcr.io/<owner>/devbrain-api:sha-<sha>`
 - `ghcr.io/<owner>/devbrain-web:sha-<sha>`
 - `ghcr.io/<owner>/devbrain-worker:sha-<sha>`
 - `ghcr.io/<owner>/devbrain-postgres:sha-<sha>`
+
+当前 workflow 不产出 `devbrain-backup`。不要在试用阶段启动 `backup` 服务；需要生产备份时，先补齐 backup 镜像构建、`/backups` volume、R2/rclone 配置和 restore-test。
 
 验收标准：
 
@@ -126,10 +136,13 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 
 ```caddy
 :80 {
-  encode zstd gzip
+  handle /auth/* {
+    reverse_proxy api:3001
+  }
 
-  @auth path /auth/*
-  reverse_proxy @auth api:3001
+  handle /storage/local/* {
+    reverse_proxy api:3001
+  }
 
   handle_path /api/* {
     reverse_proxy api:3001 {
@@ -140,7 +153,22 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
     }
   }
 
-  reverse_proxy /* web:3000
+  handle {
+    encode zstd gzip
+
+    @nextstatic path /_next/static/* /_next/image*
+    header @nextstatic Cache-Control "public, max-age=31536000, immutable"
+
+    @publicassets path /favicon.ico /icon.png /apple-icon.png /robots.txt
+    header @publicassets Cache-Control "public, max-age=86400"
+
+    @html {
+      not path /_next/static/* /_next/image* /favicon.ico /icon.png /apple-icon.png /robots.txt
+    }
+    header @html Cache-Control "private, no-cache"
+
+    reverse_proxy web:3000
+  }
 }
 ```
 
@@ -150,15 +178,17 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 docker compose -f docker-compose.yml -f docker-compose.prod.yml config
 ```
 
-恢复完整生产模式时，把 `:80` 改成 `{$DEVBRAIN_DOMAIN}`，并在 `.env` 中配置 `DEVBRAIN_DOMAIN=<your-domain>`。
+恢复完整生产模式时，不修改 dev `Caddyfile`；改用 `docker-compose.prod.yml`，把生产域名维护在 `infra/caddy/Caddyfile.prod`，并在 `.env` 中配置 `CADDY_CONFIG=Caddyfile.prod`。
 
 ### 1.5 Backup 暂缓项
 
 试用阶段暂不把 backup 服务作为上线门槛。当前只允许上传非私密、可丢失的试用数据；如果要保存真实用户数据，必须先恢复本节能力。
 
+当前仓库虽然已有 `infra/backup/Dockerfile`、`backup.sh` 和 `crontab`，但 compose 未给 backup 配置 build，GHCR workflow 也不构建 `devbrain-backup` 镜像，且生产 volume/restore-test 还未验收。
+
 恢复完整生产模式前必须补齐：
 
-- `backup` 服务有可用 image 或 build 配置。
+- `backup` 服务有可用 GHCR image 或生产 build 配置。
 - `/backups` 有明确 volume，并能被备份容器写入。
 - `infra/backup/backup.sh` 路径与容器入口一致。
 - R2 上传配置可用。
@@ -180,7 +210,7 @@ docker compose exec backup pg_restore --list /backups/devbrain_<date>.dump
 开发机执行：
 
 1. 确认第 1 节前置补齐已经合入 `main`。
-2. 若启用浏览器端 Sentry，确认 GitHub Repository Variable `NEXT_PUBLIC_SENTRY_DSN` 已配置；缺失时 Web 镜像构建会失败。
+2. 确认 GitHub Repository Variable `NEXT_PUBLIC_SENTRY_DSN` 已配置；当前 workflow 缺失时 Web 镜像构建会失败。
 3. 推送 `main` 或手动触发 `build-and-push` workflow。
 4. 等待 workflow 成功，记录本次 commit SHA，后文记为 `<SHA>`。
 5. 在 GHCR 页面确认 `devbrain-api`、`devbrain-web`、`devbrain-worker`、`devbrain-postgres` 四个镜像可被 VPS 拉取。
@@ -276,31 +306,31 @@ nano .env
 
 必须覆盖以下字段，不能保留默认弱口令：
 
-| 类别      | 字段                                                                   | 试用阶段值                                                |
-| --------- | ---------------------------------------------------------------------- | --------------------------------------------------------- |
-| 镜像      | `REGISTRY=ghcr.io/<owner>/`                                            | 注意末尾保留 `/`                                          |
-| 镜像      | `IMAGE_PREFIX=devbrain-`                                               | 与 GHCR 镜像名前缀一致                                    |
-| 镜像      | `IMAGE_TAG=sha-<SHA>`                                                  | 与 workflow 产物一致                                      |
-| 数据库    | `POSTGRES_PASSWORD`                                                    | 随机长口令                                                |
-| 数据库    | `DATABASE_URL`                                                         | `postgresql://devbrain:<password>@postgres:5432/devbrain` |
-| Redis     | `REDIS_URL`                                                            | `redis://redis:6379`                                      |
-| Web       | `API_URL=http://api:3001`                                              | Next.js 服务端 rewrite 访问容器内 API                     |
-| Auth      | `JWT_ACCESS_SECRET`                                                    | `openssl rand -hex 64`                                    |
-| Auth      | `JWT_REFRESH_SECRET`                                                   | `openssl rand -hex 64`                                    |
-| Auth      | `REFRESH_TOKEN_PEPPER`                                                 | `openssl rand -hex 64`                                    |
-| Auth      | `AUTH_ACCESS_TOKEN_TTL_SECONDS=900`                                    | 不超过 15 分钟                                            |
-| Auth      | `AUTH_REFRESH_TOKEN_TTL_SECONDS=604800`                                | 不超过 7 天                                               |
-| Auth      | `AUTH_COOKIE_SECURE=false`                                             | HTTP + IP 试用阶段临时例外                                |
-| CORS      | `CORS_ORIGIN=http://<vps-ip>`                                          | 不允许 `*`                                                |
-| Storage   | `STORAGE_SIGNATURE_SECRET`                                             | `openssl rand -hex 64`                                    |
-| Storage   | `DEV_STORAGE_ROOT=/home/node/devbrain-storage`                         | compose 已固定该路径；API/Worker 共享同一 volume          |
-| Provider  | `EMBEDDING_PROVIDER=dashscope`                                         | 真实 embedding                                            |
-| Provider  | `RERANK_PROVIDER=dashscope`                                            | 真实 rerank                                               |
-| Provider  | `LLM_PROVIDER=qwen`                                                    | 真实 Qwen-Plus                                            |
-| DashScope | `DASHSCOPE_API_KEY`                                                    | 阿里云控制台获取                                          |
-| R2        | `R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`、`R2_ENDPOINT`、`R2_BUCKET` | 试用阶段可留空；恢复完整生产模式前补齐                    |
+| 类别      | 字段                                                                              | 试用阶段值                                                                                                                      |
+| --------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 镜像      | `REGISTRY=ghcr.io/<owner>/`                                                       | 注意末尾保留 `/`                                                                                                                |
+| 镜像      | `IMAGE_PREFIX=devbrain-`                                                          | 与 GHCR 镜像名前缀一致                                                                                                          |
+| 镜像      | `IMAGE_TAG=sha-<SHA>`                                                             | 与 workflow 产物一致                                                                                                            |
+| 数据库    | `POSTGRES_PASSWORD`                                                               | 随机长口令                                                                                                                      |
+| 数据库    | `DATABASE_URL`                                                                    | `postgresql://devbrain:<password>@postgres:5432/devbrain`                                                                       |
+| Redis     | `REDIS_URL`                                                                       | `redis://redis:6379`                                                                                                            |
+| Web       | `API_URL=http://api:3001`                                                         | Next.js 服务端 rewrite 访问容器内 API                                                                                           |
+| Auth      | `JWT_ACCESS_SECRET`                                                               | `openssl rand -hex 64`                                                                                                          |
+| Auth      | `JWT_REFRESH_SECRET`                                                              | `openssl rand -hex 64`                                                                                                          |
+| Auth      | `REFRESH_TOKEN_PEPPER`                                                            | `openssl rand -hex 64`                                                                                                          |
+| Auth      | `AUTH_ACCESS_TOKEN_TTL_SECONDS=900`                                               | 不超过 15 分钟                                                                                                                  |
+| Auth      | `AUTH_REFRESH_TOKEN_TTL_SECONDS=604800`                                           | 不超过 7 天                                                                                                                     |
+| Auth      | `AUTH_COOKIE_SECURE=false`                                                        | HTTP + IP 试用阶段临时例外                                                                                                      |
+| CORS      | `CORS_ORIGIN=http://<vps-ip>`                                                     | 不允许 `*`                                                                                                                      |
+| Storage   | `STORAGE_SIGNATURE_SECRET`                                                        | `openssl rand -hex 64`                                                                                                          |
+| Storage   | `DEV_STORAGE_ROOT=/home/node/devbrain-storage`                                    | compose 已固定该路径；API/Worker 共享同一 volume                                                                                |
+| Provider  | `EMBEDDING_PROVIDER=dashscope`                                                    | 真实 embedding                                                                                                                  |
+| Provider  | `RERANK_PROVIDER=dashscope`                                                       | 真实 rerank                                                                                                                     |
+| Provider  | `LLM_PROVIDER=qwen`                                                               | 真实 Qwen-Plus                                                                                                                  |
+| DashScope | `DASHSCOPE_API_KEY`                                                               | 阿里云控制台获取                                                                                                                |
+| R2        | `R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`、`R2_ENDPOINT`、`R2_BUCKET`            | 试用阶段可留空；恢复完整生产模式前补齐                                                                                          |
 | 监控      | `SENTRY_DSN`、`NEXT_PUBLIC_SENTRY_DSN`、`LANGFUSE_*`、`BETTERSTACK_HEARTBEAT_URL` | `SENTRY_DSN` 供服务端运行时使用；`NEXT_PUBLIC_SENTRY_DSN` 还必须同步配置到 GitHub Repository Variables，供 Web 镜像构建阶段使用 |
-| 环境      | `NODE_ENV=production`                                                  | 生产运行模式                                              |
+| 环境      | `NODE_ENV=production`                                                             | 生产运行模式                                                                                                                    |
 
 确认 `.env` 不会被提交：
 

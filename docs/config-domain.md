@@ -1,18 +1,20 @@
 # 域名配置（<your-domain>）
 
+本文档记录当前生产域名配置方式。当前仓库的 `infra/caddy/Caddyfile.prod` 已直接写入 `<your-domain>, www.<your-domain>`，生产域名不通过 `.env` 的 `WEB_DOMAIN` 或 `ACME_EMAIL` 管理。切换域名时必须修改 `Caddyfile.prod`，并使用 `docker-compose.yml + docker-compose.prod.yml` 启动，否则 443 端口和 prod Caddyfile mount 不会生效。
+
 ## 1. 配置 DNS
 
 Porkbun 删除默认 Parking Page 记录：
 
 - ALIAS @ -> pixie.porkbun.com
-- CNAME * -> pixie.porkbun.com
+- CNAME \* -> pixie.porkbun.com
 
 新增 DNS：
 
-| Type | Host | Value |
-|------|------|------|
-| A | @ | <vps-ip> |
-| A | www | <vps-ip> |
+| Type | Host | Value           |
+| ---- | ---- | --------------- |
+| A    | @    | <vps-ip> |
+| A    | www  | <vps-ip> |
 
 验证：
 
@@ -31,8 +33,16 @@ dig @curitiba.ns.porkbun.com <your-domain>
 ## 2. 切换生产 Caddy 配置
 
 当前项目使用双 Caddyfile 方案：
-- `infra/caddy/Caddyfile`：开发/试用环境，`require` 无法解析模板变量，仅用于 `docker compose config` 校验。
-- `infra/caddy/Caddyfile.prod`：生产环境，域名在文件内硬编码，自动申请 Let's Encrypt 证书。
+
+- `infra/caddy/Caddyfile`：开发/IP 试用环境，监听 `:80`，反代 `/auth/*`、`/api/*`、`/storage/local/*`，并为 Next.js 静态资源设置缓存头。
+- `infra/caddy/Caddyfile.prod`：生产域名环境，域名在文件内硬编码，自动申请 Let's Encrypt 证书，保持与 dev Caddyfile 一致的路由和缓存结构。
+
+生产 compose override 通过以下配置切换 mount：
+
+```yaml
+volumes:
+  - ./infra/caddy/${CADDY_CONFIG:-Caddyfile.prod}:/etc/caddy/Caddyfile:ro
+```
 
 在生产 VPS 上执行：
 
@@ -50,8 +60,10 @@ $COMPOSE up -d caddy
 ```
 
 验收：
+
 ```bash
 $COMPOSE config | grep caddy
+docker run --rm -v "$PWD/infra/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
 ```
 
 ---
