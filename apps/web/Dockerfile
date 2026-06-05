@@ -31,7 +31,10 @@ COPY apps/web apps/web
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --offline
 
-RUN pnpm --filter @devbrain/db build \
+# DSN 值显式出现在 RUN 命令里，使 BuildKit 把 DSN 计入 layer hash，
+# 防止 DSN 变化时复用旧 cache 导致 NEXT_PUBLIC_SENTRY_DSN 未被 inline 到 bundle
+RUN echo "build-arg NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}" > /tmp/sentry-dsn-marker \
+ && pnpm --filter @devbrain/db build \
  && pnpm --filter @devbrain/web build
 
 FROM base AS runtime
