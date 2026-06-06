@@ -9,6 +9,10 @@ import { PostgresVectorStore } from './postgres-vector-store';
 import { computeRRF } from './rrf';
 import type { FtsCandidate, VectorCandidate } from './vector-store.interface';
 import type { RetrievalChunk, RetrievalResult } from './retrieval.types';
+import {
+  captureBusinessException,
+  markErrorManuallyCaptured,
+} from '../observability/sentry';
 
 const prisma = getPrismaClient();
 
@@ -45,6 +49,12 @@ export class RetrievalService {
         );
         embeddingFailed = true;
       } else {
+        captureBusinessException(err, {
+          route: '/retrieval',
+          stage: 'query_embedding',
+          kbId,
+          provider: this.embeddingProvider.providerName,
+        });
         throw err;
       }
     }
@@ -63,6 +73,12 @@ export class RetrievalService {
               );
               return [] as VectorCandidate[];
             }
+            captureBusinessException(err, {
+              route: '/retrieval',
+              stage: 'vector_recall',
+              kbId,
+              provider: this.embeddingProvider.providerName,
+            });
             throw err;
           }),
     ]);
@@ -150,15 +166,28 @@ export class RetrievalService {
         this.logger.error(
           `rerank provider error | provider: ${this.rerankProvider.providerName} | errorCode: ${err.errorCode} | message: ${err.message}`,
         );
+        captureBusinessException(err, {
+          route: '/retrieval',
+          stage: 'rerank',
+          kbId,
+          provider: this.rerankProvider.providerName,
+          errorCode: err.errorCode,
+        });
         throw err;
       }
       this.logger.error(
         `rerank 失败 | provider: ${this.rerankProvider.providerName} | error: ${(err as Error).message}`,
       );
-      throw new ProviderError(
-        ProviderErrorCodes.FAILED,
-        `Rerank 服务调用失败: ${(err as Error).message}`,
-      );
+      captureBusinessException(err, {
+        route: '/retrieval',
+        stage: 'rerank',
+        kbId,
+        provider: this.rerankProvider.providerName,
+        errorCode: ProviderErrorCodes.FAILED,
+      });
+      const wrapped = new ProviderError(ProviderErrorCodes.FAILED, 'Rerank 服务调用失败');
+      markErrorManuallyCaptured(wrapped);
+      throw wrapped;
     }
 
     this.logger.log(

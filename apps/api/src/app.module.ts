@@ -1,5 +1,6 @@
 import { Module, ValidationPipe } from '@nestjs/common';
-import { APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_PIPE } from '@nestjs/core';
+import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 import { HealthController } from './health/health.controller';
 import { ReadyzController } from './health/health.controller';
 import { AuthModule } from './auth/auth.module';
@@ -16,6 +17,7 @@ import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
     AuthModule,
     SpacesModule,
     KnowledgeBaseModule,
@@ -30,6 +32,10 @@ import { ChatModule } from './chat/chat.module';
   ],
   controllers: [HealthController, ReadyzController],
   providers: [
+    {
+      provide: APP_FILTER,
+      useClass: SentryGlobalFilter,
+    },
     {
       provide: APP_PIPE,
       useValue: new ValidationPipe({

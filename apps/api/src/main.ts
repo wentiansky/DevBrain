@@ -1,6 +1,5 @@
-import { config } from 'dotenv';
+import './instrument';
 import * as path from 'node:path';
-config({ path: path.resolve(__dirname, '../../../.env') });
 
 // 将 DEV_STORAGE_ROOT 解析为项目根目录下的绝对路径，
 // 确保 API 和 Worker 进程在不同 CWD 下仍读写同一存储目录。

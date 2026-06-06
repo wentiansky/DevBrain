@@ -12,6 +12,10 @@ import { verifySignatureToken } from '../storage/signature';
 import { KnowledgeBaseService } from '../kbs/knowledge-base.service';
 import { QUEUE_TOKEN } from '../queue/queue.module';
 import type { Queue } from 'bullmq';
+import {
+  captureBusinessException,
+  captureBusinessMessage,
+} from '../observability/sentry';
 
 const prisma = getPrismaClient();
 
@@ -101,6 +105,15 @@ export class DocumentsService {
     }
 
     if (!this.queue) {
+      captureBusinessMessage('document queue unavailable', {
+        route: '/documents',
+        stage: 'document_enqueue',
+        kbId: kb.id,
+        sourceType: 'markdown',
+        sizeBytes: dto.sizeBytes ?? headResult.sizeBytes ?? undefined,
+        mimeType: dto.mimeType ?? undefined,
+        errorCode: 'queue_unavailable',
+      });
       throw new BadRequestException('文档处理队列未就绪，请确认 Redis 已启动并配置 REDIS_URL');
     }
 
@@ -123,7 +136,21 @@ export class DocumentsService {
       objectKey: document.objectKey,
     };
 
-    await this.queue.add(DOCUMENT_PROCESSING_JOB, jobPayload);
+    try {
+      await this.queue.add(DOCUMENT_PROCESSING_JOB, jobPayload);
+    } catch (err) {
+      captureBusinessException(err, {
+        route: '/documents',
+        stage: 'document_enqueue',
+        kbId: kb.id,
+        documentId: document.id,
+        sourceType: document.sourceType,
+        sizeBytes: document.sizeBytes ?? undefined,
+        mimeType: document.mimeType ?? undefined,
+        errorCode: 'queue_add_failed',
+      });
+      throw err;
+    }
 
     return toResponse(document);
   }

@@ -418,7 +418,7 @@ $COMPOSE logs -f worker
 - `/api/healthz` 与 `/api/readyz` 验证。Caddy 必须使用 `handle_path /api/*` 剥掉 `/api` 前缀后再转发到 API，因为 API 容器内部路由是 `/healthz`、`/readyz`、`/kbs`。
 - HTTPS 证书验证。
 - Langfuse trace 验证。
-- Sentry 测试事件。
+- 完整 Sentry 面板验收；若本次改动涉及 API Sentry，按下方“API Sentry 安全冒烟”单独验证。
 - Better Stack 心跳和 Uptime。
 
 ### 5.3 手动备份提示
@@ -499,7 +499,7 @@ $COMPOSE start api web worker
 4. `.env` 增加 `CADDY_CONFIG=Caddyfile.prod`。
 5. `.env` 修改 `CORS_ORIGIN=https://<your-domain>`。
 6. `.env` 修改 `AUTH_COOKIE_SECURE=true`。
-7. 接入 Sentry，并验证测试事件可见。
+7. 接入 Sentry，并验证脱敏测试事件可见。
 8. 接入 Langfuse，并验证一次对话 trace 可见，且不包含原始私文档、token、完整 prompt。
 9. 接入 Better Stack 心跳和 Uptime。
 10. 对象存储切到 R2 presigned PUT，并完成上传 / HEAD smoke。
@@ -525,3 +525,53 @@ curl -sfI https://<your-domain>/
 - 任何破坏性 schema 变更前必须先备份，并确认备份可恢复。
 - Argon2id 参数、token rotation、refresh token hash 禁止为了部署便利而降级。
 - 恢复 Sentry / Langfuse 后必须开启 PII scrubbing，禁止上报原始私文档、token、完整 prompt。
+
+### 8.1 API Sentry 安全冒烟
+
+API Sentry 冒烟只允许发送人工构造的脱敏测试事件，禁止用真实私文档、真实用户 prompt、真实 token 或完整请求体触发验证。
+
+先确认 API 容器拿到了服务端 DSN，不打印具体值：
+
+```bash
+docker exec devbrain-api node -e 'console.log(process.env.SENTRY_DSN ? "SENTRY_DSN=set" : "SENTRY_DSN=empty")'
+```
+
+再从 API 容器内发送最小 envelope。该事件只包含测试错误名、环境和安全 tag：
+
+```bash
+docker exec devbrain-api node -e '
+const crypto = require("crypto");
+const os = require("os");
+const dsn = process.env.SENTRY_DSN;
+if (!dsn) throw new Error("SENTRY_DSN empty");
+const u = new URL(dsn);
+const publicKey = u.username;
+const projectId = u.pathname.split("/").filter(Boolean).pop();
+const eventId = crypto.randomBytes(16).toString("hex");
+const endpoint = `${u.origin}/api/${projectId}/envelope/?sentry_key=${encodeURIComponent(publicKey)}&sentry_version=7&sentry_client=devbrain-api-smoke/1.0`;
+const now = new Date().toISOString();
+const event = {
+  event_id: eventId,
+  timestamp: now,
+  platform: "node",
+  level: "error",
+  environment: process.env.NODE_ENV || "production",
+  server_name: os.hostname(),
+  tags: { probe: "api-sentry-smoke", service: "devbrain-api" },
+  exception: { values: [{ type: "SentryApiSmokeTest", value: "API Sentry smoke test" }] },
+};
+const body = `${JSON.stringify({ event_id: eventId, sent_at: now })}\n${JSON.stringify({ type: "event" })}\n${JSON.stringify(event)}\n`;
+fetch(endpoint, { method: "POST", headers: { "content-type": "application/x-sentry-envelope" }, body })
+  .then(async (res) => {
+    console.log(JSON.stringify({ status: res.status, ok: res.ok, eventId, response: await res.text() }));
+    if (!res.ok) process.exit(1);
+  })
+  .catch((err) => { console.error(err); process.exit(1); });
+'
+```
+
+成功标准：
+
+- 命令返回 `status: 200` 和 event id。
+- Sentry 项目中能看到 `SentryApiSmokeTest`。
+- event 中没有 `authorization`、`cookie`、refresh token、用户 prompt、文档正文、chunk 内容或完整 LLM 回答。

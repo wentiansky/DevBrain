@@ -15,6 +15,7 @@ import { AuthConfigService } from './auth-config.service';
 import { RegisterDto, LoginDto, AuthResponse, AuthUserResponse } from './dto/auth.dto';
 import { MemoryRateLimiter } from '../common/rate-limit/memory-rate-limiter.adapter';
 import { PersonalSpaceService } from '../spaces/personal-space.service';
+import { captureBusinessMessage } from '../observability/sentry';
 
 const prisma = getPrismaClient();
 
@@ -320,6 +321,11 @@ export class AuthService {
             revokedAt: new Date(),
             revokedReason: 'refresh_token_replay_detected',
           },
+        });
+        captureBusinessMessage('refresh token replay detected', {
+          route: '/auth/refresh',
+          stage: 'auth_refresh_replay',
+          errorCode: 'refresh_token_replay',
         });
         this.clearRefreshCookie(res);
         throw new UnauthorizedException('token family 已被撤销');

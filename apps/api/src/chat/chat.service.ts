@@ -7,6 +7,10 @@ import { RetrievalService } from '../retrieval/retrieval.service';
 import { buildRagPrompt } from '../generation/prompt-builder';
 import { parseCitationsFromAnswer } from './citation-parser';
 import type { RetrievalChunk } from '../retrieval/retrieval.types';
+import {
+  captureBusinessException,
+  isManuallyCapturedError,
+} from '../observability/sentry';
 
 const prisma = getPrismaClient();
 
@@ -123,6 +127,15 @@ export class ChatService {
           this.logger.error(
             `LLM 生成失败 | errorCode: ${chunk.errorCode} | message: ${chunk.message}`,
           );
+          captureBusinessException(new Error(chunk.errorCode || 'provider.failed'), {
+            route: '/chat',
+            stage: 'llm_stream_error',
+            kbId,
+            conversationId,
+            messageId: assistantMessageId,
+            provider: this.llmProvider.providerName,
+            errorCode: chunk.errorCode || 'provider.failed',
+          });
           await this.markAssistantFailed(
             assistantMessageId,
             chunk.errorCode || 'provider.failed',
@@ -176,6 +189,17 @@ export class ChatService {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '未知错误';
       this.logger.error(`Chat 生成异常 | error: ${errorMessage}`);
+      if (!isManuallyCapturedError(err)) {
+        captureBusinessException(err, {
+          route: '/chat',
+          stage: 'chat_stream',
+          kbId,
+          conversationId,
+          messageId: assistantMessageId,
+          provider: this.llmProvider.providerName,
+          errorCode: 'provider.failed',
+        });
+      }
       await this.markAssistantFailed(
         assistantMessageId,
         'provider.failed',

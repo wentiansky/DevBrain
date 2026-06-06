@@ -382,6 +382,14 @@ Worker 已注册队列: document-processing
 Worker 已启动，等待文档处理任务...
 ```
 
+API Sentry 安全冒烟：
+
+```bash
+docker exec devbrain-api node -e 'console.log(process.env.SENTRY_DSN ? "SENTRY_DSN=set" : "SENTRY_DSN=empty")'
+```
+
+若本次发布包含 API Sentry 改动，再从 API 容器内发送最小 Sentry envelope。测试事件只允许包含 `SentryApiSmokeTest`、环境、服务名和 event id，禁止携带真实私文档、用户 prompt、token、cookie、chunk 内容或完整 LLM 回答。成功标准是 Sentry ingest 返回 `200`，并且面板中的测试 event 不含敏感字段。
+
 浏览器冒烟：
 
 1. 打开 `http://<vps-ip>/`。
