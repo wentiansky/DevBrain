@@ -14,6 +14,8 @@ interface ChatMessage {
   citations?: CitationResponse[];
 }
 
+export type { ChatMessage };
+
 interface StreamContext {
   conversationId: string;
   assistantMessageId: string;
