@@ -1,11 +1,18 @@
 'use client';
 
-import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 'react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  type FormEvent,
+  type KeyboardEvent,
+} from 'react';
+import { Send, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Send } from 'lucide-react';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
+  onStop?: () => void;
   isStreaming: boolean;
   disabled?: boolean;
   placeholder?: string;
@@ -14,25 +21,28 @@ interface ChatInputProps {
 
 export function ChatInput({
   onSend,
+  onStop,
   isStreaming,
   disabled = false,
-  placeholder = '输入你的问题...',
+  placeholder = '提问关于该知识库的问题…  (Enter 发送, Shift+Enter 换行)',
   initialValue = '',
 }: ChatInputProps) {
   const [input, setInput] = useState(initialValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
-    }
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }, [input]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isStreaming || disabled) return;
-    onSend(input);
+    if (isStreaming || disabled) return;
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    onSend(trimmed);
     setInput('');
   };
 
@@ -43,30 +53,50 @@ export function ChatInput({
     }
   };
 
+  const canStop = isStreaming && typeof onStop === 'function';
+  const canSend = !isStreaming && !disabled && input.trim().length > 0;
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="border-t border-border bg-background px-4 py-3"
+      className="border-t border-border bg-background/95 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3 backdrop-blur"
     >
-      <div className="mx-auto flex max-w-3xl items-end gap-2">
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled || isStreaming}
-          rows={1}
-          className="min-h-[40px] max-h-[200px] flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-        />
-        <Button
-          type="submit"
-          size="icon"
-          disabled={!input.trim() || isStreaming || disabled}
-          className="h-10 w-10 shrink-0"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+      <div className="mx-auto w-full max-w-[800px] px-3 sm:px-6">
+        <div className="flex items-end gap-2 rounded-2xl border border-input bg-background px-3 py-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={disabled}
+            rows={1}
+            aria-label="消息输入框"
+            className="min-h-[28px] max-h-[200px] flex-1 resize-none border-0 bg-transparent py-1 text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/70 disabled:cursor-not-allowed disabled:opacity-50"
+          />
+          {canStop ? (
+            <Button
+              type="button"
+              size="icon"
+              variant="secondary"
+              onClick={onStop}
+              className="h-8 w-8 shrink-0 rounded-full"
+              aria-label="停止生成"
+            >
+              <Square className="h-3.5 w-3.5 fill-current" />
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!canSend}
+              className="h-8 w-8 shrink-0 rounded-full"
+              aria-label="发送消息"
+            >
+              <Send className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
     </form>
   );

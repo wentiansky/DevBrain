@@ -17,14 +17,15 @@ export function CitationChip({ citation, isActive, onClick }: CitationChipProps)
     <button
       type="button"
       onClick={() => onClick(citation)}
-      className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium transition-colors ${
+      title={label}
+      className={`inline-flex max-w-[180px] items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-medium transition-colors ${
         isActive
-          ? 'bg-primary text-primary-foreground'
-          : 'bg-muted text-muted-foreground hover:bg-muted-foreground/20'
+          ? 'border-primary bg-primary text-primary-foreground'
+          : 'border-border bg-background text-muted-foreground hover:border-ring/60 hover:bg-accent hover:text-foreground'
       }`}
     >
       <span className="font-mono text-[10px]">{citation.order + 1}</span>
-      <span className="max-w-[120px] truncate">{label}</span>
+      <span className="truncate">{label}</span>
     </button>
   );
 }
@@ -41,7 +42,7 @@ export function CitationList({
   if (!citations || citations.length === 0) return null;
 
   return (
-    <div className="mt-2 flex flex-wrap gap-1.5">
+    <div className="mt-2 flex flex-wrap gap-1.5 px-0.5">
       {citations.map((c) => (
         <CitationChip
           key={c.id || c.chunkId}
