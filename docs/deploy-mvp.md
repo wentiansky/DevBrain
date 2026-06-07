@@ -2,11 +2,12 @@
 
 本文档记录最小生产 IP 部署流程。当前目标是先用 `http://<vps-ip>/` 给朋友试用，不买域名，不接 Langfuse / Better Stack，不启用自动备份。当前 GHCR workflow 会强制要求 GitHub Repository Variable `NEXT_PUBLIC_SENTRY_DSN`；这是公开浏览器端 DSN，不是 token，也不代表完整监控闭环已经完成。
 
-当前仓库状态（截至 2026-06-05）：
+当前仓库状态（截至 2026-06-07）：
 
 - 已有 `docker-compose.prod.yml`、双 Caddyfile、API/Web healthcheck、GHCR workflow 和 `pnpm release:vps`。
-- GHCR workflow 构建 `api`、`web`、`worker`、`postgres` 四个镜像，不构建 `backup` 镜像。
+- GHCR workflow 构建 `api`、`web`、`worker`、`postgres` 四个镜像，不构建 `backup` 镜像；workflow 在镜像构建前置 `check-migrations` job 扫描 forbidden DROP，能从源头拦下误删 pgvector/FTS 索引的 migration，否则 GHCR 不会产出新镜像。
 - 当前上传仍使用 local storage adapter，通过 API/Worker 共享 `storagedata` volume 跑通；R2 adapter 仍待 P1。
+- Sentry 已落地：浏览器端 SDK + App Router 路由跳转仪表化、API 端 SDK init + 关键路径错误上报 + 敏感字段脱敏；运行时仍需透传 `SENTRY_DSN`，DSN 为空时降级为 no-op。
 - Web Vitals 当前只在开发环境 console 输出；生产上报到 Sentry 仍待补齐。
 
 ## 1. 前置条件

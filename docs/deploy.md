@@ -2,11 +2,12 @@
 
 本文档面向 P0 功能闭环已经完成、VPS 已购买、但先用公网 IP 或最小域名配置跑通真实朋友试用闭环的状态。镜像由 GitHub Actions 构建并推送到 GHCR，VPS 只 `docker compose pull` GHCR 镜像，不在 VPS 上构建 Next.js / NestJS / Worker。
 
-当前仓库状态（截至 2026-06-05）：
+当前仓库状态（截至 2026-06-07）：
 
 - 已有 `docker-compose.yml`、`docker-compose.prod.yml`、API/Web/Worker/Postgres Dockerfile、双 Caddyfile、容器 healthcheck 和 `pnpm release:vps`。
-- GHCR workflow 当前构建并推送 `api`、`web`、`worker`、`postgres` 四个镜像，不构建 `backup` 镜像。
+- GHCR workflow 当前构建并推送 `api`、`web`、`worker`、`postgres` 四个镜像，不构建 `backup` 镜像；workflow 在镜像构建前置 `check-migrations` job，扫描 `packages/db/prisma/migrations/**/migration.sql` 中的 forbidden DROP（pgvector ivfflat/hnsw 索引、tsvector 列、zhparser FTS 触发器等），命中即失败、不进入构建。
 - Web 镜像构建阶段当前会校验 GitHub Repository Variable `NEXT_PUBLIC_SENTRY_DSN`，缺失会让 `web` matrix 构建失败。该值是公开 DSN，不是 token；即使暂不做完整监控，也要配置一个浏览器端 DSN，或先修改 workflow 再构建。
+- API 端 Sentry 在 `apps/api/src/instrument.ts` 中提前 init SDK，并在 auth/chat/documents/retrieval 关键路径上报错误，敏感字段在 `apps/api/src/observability/sentry.ts` 内统一脱敏；运行时仍需透传 `SENTRY_DSN`，DSN 为空时降级为 no-op。
 - 当前代码只有 local storage adapter；试用部署通过 API/Worker 共享持久化 volume 跑通上传。R2 presigned PUT/HEAD adapter 仍是 P1。
 
 阅读顺序：先看第 0 节确认当前部署边界，再完成第 1 节前置补齐，最后按第 2 节开始执行。第 1 节不满足时不要继续上线。
@@ -76,6 +77,8 @@ docker compose run --rm migrate
 ### 1.2 GitHub Actions 推送 GHCR
 
 需要有 `.github/workflows/build-and-push.yml`，触发条件至少包含 `push: branches: [main]` 和 `workflow_dispatch`。
+
+当前 workflow 会在镜像构建前置 `check-migrations` job：跑 `node scripts/check-migrations.mjs`，扫描 `packages/db/prisma/migrations/**/migration.sql` 中的 forbidden DROP（pgvector ivfflat/hnsw 索引、tsvector 列、zhparser FTS 触发器等）。命中则失败、不进入后续 `build` matrix，从源头拦住误删生产索引的 migration。后续改 schema 必须使用 `pnpm --filter @devbrain/db db:migrate-safe` 运行 `prisma migrate dev`，该包装会按相同规则拒绝危险 migration，对应踩坑见仓库根部的 user memory 与 `docs/踩坑.md`。
 
 当前 workflow 会在 Web 镜像构建前强制检查 GitHub 仓库的 Repository Variable `NEXT_PUBLIC_SENTRY_DSN`。这是公开 DSN，不是 token；它会在 Web 镜像构建阶段通过 Docker build arg 内联进 Next.js 浏览器 bundle，不能只依赖 VPS 运行时 `.env` 补齐。若确实要完全禁用浏览器端 Sentry，必须先修改 `.github/workflows/build-and-push.yml`，否则 GHCR 构建不会通过。
 

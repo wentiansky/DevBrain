@@ -17,9 +17,9 @@ DevBrain 是一个面向开发者的 self-hostable RAG 知识库。它支持上�
 
 ## 当前实现快照
 
-截至 2026-06-05，仓库代码已覆盖 P0 主链：认证、个人 KB、Markdown 上传、worker ingestion、混合检索、真实生成、SSE chat streaming、文本 citation 和前端 source panel。
+截至 2026-06-07，仓库代码已覆盖 P0 主链：认证、个人 KB、Markdown 上传、worker ingestion、混合检索、真实生成、SSE chat streaming、文本 citation 和前端 source panel。聊天页 UI 与 KB 详情页已经过模块化重做，会话支持软删除，流式终止后会刷新最近对话列表并保留已生成内容。
 
-同时已具备上线试用所需的基础工程资产：`docker-compose.yml` + `docker-compose.prod.yml`、API/Web/Worker/Postgres 镜像 Dockerfile、GHCR 构建 workflow、`pnpm release:vps` 发布脚本、双 Caddyfile、容器 healthcheck、Web Vitals 开发期采集和 Sentry 浏览器端错误上报。
+同时已具备上线试用所需的基础工程资产：`docker-compose.yml` + `docker-compose.prod.yml`、API/Web/Worker/Postgres 镜像 Dockerfile、GHCR 构建 workflow（含 `check-migrations` 前置 job）、`pnpm release:vps` 发布脚本、双 Caddyfile、容器 healthcheck、Web Vitals 开发期采集、Sentry 浏览器端错误上报和 App Router 路由跳转仪表化、API Sentry 错误上报与可观测性模块。
 
 仍未视为完整生产闭环的部分：R2 对象存储 adapter、Langfuse、Better Stack、自动备份 restore-test、反馈入口、Web Vitals 生产上报，以及 Cloudflare/CDN/Sentry 的生产侧证据归档。这些继续按 P1 或 `optimize-web-first-load-perf` 的外部验收推进。
 
@@ -65,7 +65,7 @@ DevBrain 是一个面向开发者的 self-hostable RAG 知识库。它支持上�
 | 鉴权             | Argon2id、JWT access/refresh、token family rotation     | refresh token 只存 SHA-256，cookie 使用 HttpOnly/Secure/SameSite               |
 | 反向代理         | Caddy 2                                                 | P1 部署使用，自动 HTTPS                                                        |
 | 部署             | Docker Compose、GHCR pull-by-SHA、`release-vps`         | CI 构建镜像，VPS 只拉取镜像并执行 migration                                    |
-| 可观测           | Sentry 浏览器端错误上报；Langfuse/Better Stack 待 P1    | 浏览器端 DSN 构建期注入；Web Vitals 生产上报、LLM trace 和外部探测待补齐       |
+| 可观测           | Sentry 浏览器端错误上报 + App Router 路由跳转仪表化、API Sentry 错误上报与可观测性模块；Langfuse/Better Stack 待 P1 | 浏览器端 DSN 构建期注入；API SDK 在 `instrument.ts` 提前 init；Web Vitals 生产上报与 LLM trace 仍待补齐 |
 | 备份             | `pg_dump`、rclone、supercronic                          | backup 镜像资产已存在；restore-test 和生产启用仍待 P1                          |
 
 ---
@@ -90,8 +90,8 @@ flowchart TB
     Worker --> LocalStorage
     Worker -. P1 .-> R2[(Cloudflare R2)]
     API -. P1 .-> Langfuse[LLM Trace]
-    API -. P1 .-> Sentry[Server Error Tracking]
-    Web --> Sentry[Browser Error Tracking]
+    API --> SentryServer[Server Error Tracking]
+    Web --> SentryBrowser[Browser Error Tracking + Router Transition]
     Web -. dev .-> Console[Web Vitals Console]
 ```
 
@@ -163,7 +163,9 @@ devbrain/
 │   └── planning/            # 产品需求和开发路线图
 ├── openspec/                # OpenSpec changes/specs
 ├── scripts/
-│   └── release-vps.sh       # VPS 发布脚本
+│   ├── release-vps.sh       # VPS 发布脚本
+│   ├── db-migrate-safe.mjs  # 受控运行 prisma migrate dev，防误删 pgvector/FTS 索引
+│   └── check-migrations.mjs # CI 前置扫 forbidden DROP，作为 GHCR 构建门槛
 ├── docker-compose.prod.yml
 ├── docker-compose.yml
 ├── .env.example
@@ -271,7 +273,7 @@ pnpm release:vps
 
 ### P0 收尾性能优化专项
 
-- [ ] `optimize-web-first-load-perf`：仓库内大部分代码改造已落地，包括受保护段 RSC 静态外壳、路由级骨架、客户端 auth/KB 并行 fetch、双 Caddyfile、HTTPS/HTTP/2 生产配置、静态资源 `immutable`、容器 healthcheck、Web Vitals 开发期采集和 Sentry 浏览器端错误上报。仍待补齐或归档：Web Vitals 生产上报、Cloudflare cache status、真实 LCP/TTFB/INP、Sentry 面板证据和 SSE 经 CDN 冒烟。详见 `openspec/changes/optimize-web-first-load-perf/`、`docs/planning/devbrain-prd.md` §11.5 和 `docs/deploy-mvp.md`。
+- [ ] `optimize-web-first-load-perf`：仓库内大部分代码改造已落地，包括受保护段 RSC 静态外壳、路由级骨架、客户端 auth/KB 并行 fetch、双 Caddyfile、HTTPS/HTTP/2 生产配置、静态资源 `immutable`、容器 healthcheck、Web Vitals 开发期采集、Sentry 浏览器端错误上报与 App Router 路由跳转仪表化、API Sentry 错误上报。仍待补齐或归档：Web Vitals 生产上报、Cloudflare cache status、真实 LCP/TTFB/INP、Sentry 面板证据和 SSE 经 CDN 冒烟。详见 `openspec/changes/optimize-web-first-load-perf/`、`docs/planning/devbrain-prd.md` §11.5 和 `docs/deploy-mvp.md`。
 
 ### P1
 
