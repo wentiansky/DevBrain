@@ -25,7 +25,7 @@ function safeEncodeURIComponent(value: string): string {
   return encodeURIComponent(value).replace(/%2F/g, '/');
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasRefresh = request.cookies.has(REFRESH_COOKIE_NAME);
 

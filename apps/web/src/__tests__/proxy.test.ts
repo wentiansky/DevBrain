@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { middleware } from '@/middleware';
+import { proxy } from '@/proxy';
 
 function mockRequest(opts: {
   pathname: string;
@@ -21,7 +21,7 @@ function mockRequest(opts: {
       searchParams,
     },
     url,
-  } as unknown as Parameters<typeof middleware>[0];
+  } as unknown as Parameters<typeof proxy>[0];
 }
 
 function isRedirect(res: Response, expectedLocation: string): boolean {
@@ -35,23 +35,23 @@ function isPassThrough(res: Response): boolean {
   return res.headers.get('x-middleware-next') === '1';
 }
 
-describe('middleware - 路由认证保护', () => {
+describe('proxy - 路由认证保护', () => {
   describe('未登录用户访问受保护页面', () => {
     it('访问 / 时跳转到 /login?next=/', () => {
       const req = mockRequest({ pathname: '/', hasRefreshCookie: false });
-      const res = middleware(req);
+      const res = proxy(req);
       expect(isRedirect(res, 'http://localhost:3000/login?next=/')).toBe(true);
     });
 
     it('访问 /kb/123 时跳转到 /login?next=/kb/123', () => {
       const req = mockRequest({ pathname: '/kb/123', hasRefreshCookie: false });
-      const res = middleware(req);
+      const res = proxy(req);
       expect(isRedirect(res, 'http://localhost:3000/login?next=/kb/123')).toBe(true);
     });
 
     it('访问 /kb/123/chat 时跳转到 /login?next=/kb/123/chat', () => {
       const req = mockRequest({ pathname: '/kb/123/chat', hasRefreshCookie: false });
-      const res = middleware(req);
+      const res = proxy(req);
       expect(isRedirect(res, 'http://localhost:3000/login?next=/kb/123/chat')).toBe(true);
     });
 
@@ -61,7 +61,7 @@ describe('middleware - 路由认证保护', () => {
         search: '?tab=docs',
         hasRefreshCookie: false,
       });
-      const res = middleware(req);
+      const res = proxy(req);
       expect(isRedirect(res, 'http://localhost:3000/login?next=/kb/123%3Ftab%3Ddocs')).toBe(true);
     });
   });
@@ -69,13 +69,13 @@ describe('middleware - 路由认证保护', () => {
   describe('已登录用户访问认证页面', () => {
     it('访问 /login 时跳转到 /', () => {
       const req = mockRequest({ pathname: '/login', hasRefreshCookie: true });
-      const res = middleware(req);
+      const res = proxy(req);
       expect(isRedirect(res, 'http://localhost:3000/')).toBe(true);
     });
 
     it('访问 /register 时跳转到 /', () => {
       const req = mockRequest({ pathname: '/register', hasRefreshCookie: true });
-      const res = middleware(req);
+      const res = proxy(req);
       expect(isRedirect(res, 'http://localhost:3000/')).toBe(true);
     });
 
@@ -85,7 +85,7 @@ describe('middleware - 路由认证保护', () => {
         search: '?error=session_expired',
         hasRefreshCookie: true,
       });
-      const res = middleware(req);
+      const res = proxy(req);
       expect(isRedirect(res, 'http://localhost:3000/')).toBe(true);
     });
   });
@@ -93,7 +93,7 @@ describe('middleware - 路由认证保护', () => {
   describe('已登录用户访问受保护页面', () => {
     it('访问 / 时放行并设置私有缓存头', () => {
       const req = mockRequest({ pathname: '/', hasRefreshCookie: true });
-      const res = middleware(req);
+      const res = proxy(req);
       expect(isPassThrough(res)).toBe(true);
       expect(res.headers.get('Cache-Control')).toBe(
         'private, no-cache, no-store, must-revalidate',
@@ -102,7 +102,7 @@ describe('middleware - 路由认证保护', () => {
 
     it('访问 /kb/123 时放行并设置私有缓存头', () => {
       const req = mockRequest({ pathname: '/kb/123', hasRefreshCookie: true });
-      const res = middleware(req);
+      const res = proxy(req);
       expect(isPassThrough(res)).toBe(true);
       expect(res.headers.get('Cache-Control')).toBe(
         'private, no-cache, no-store, must-revalidate',
@@ -113,7 +113,7 @@ describe('middleware - 路由认证保护', () => {
   describe('未登录用户访问认证页面', () => {
     it('访问 /login 时放行并设置私有缓存头（cookie-sensitive）', () => {
       const req = mockRequest({ pathname: '/login', hasRefreshCookie: false });
-      const res = middleware(req);
+      const res = proxy(req);
       expect(isPassThrough(res)).toBe(true);
       expect(res.headers.get('Cache-Control')).toBe(
         'private, no-cache, no-store, must-revalidate',
@@ -122,7 +122,7 @@ describe('middleware - 路由认证保护', () => {
 
     it('访问 /register 时放行并设置私有缓存头（cookie-sensitive）', () => {
       const req = mockRequest({ pathname: '/register', hasRefreshCookie: false });
-      const res = middleware(req);
+      const res = proxy(req);
       expect(isPassThrough(res)).toBe(true);
       expect(res.headers.get('Cache-Control')).toBe(
         'private, no-cache, no-store, must-revalidate',
@@ -133,7 +133,7 @@ describe('middleware - 路由认证保护', () => {
   describe('非受保护路径', () => {
     it('访问 /api/health 时直接放行', () => {
       const req = mockRequest({ pathname: '/api/health', hasRefreshCookie: false });
-      const res = middleware(req);
+      const res = proxy(req);
       expect(isPassThrough(res)).toBe(true);
     });
   });
