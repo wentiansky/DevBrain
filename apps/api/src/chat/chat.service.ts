@@ -240,6 +240,7 @@ export class ChatService {
           id: conversationId,
           kbId,
           createdById: userId,
+          deletedAt: null,
         },
       });
 
@@ -417,7 +418,7 @@ export class ChatService {
     }
 
     const conversations = await prisma.conversation.findMany({
-      where: { kbId, createdById: userId },
+      where: { kbId, createdById: userId, deletedAt: null },
       orderBy: { updatedAt: 'desc' },
       select: {
         id: true,
@@ -437,6 +438,7 @@ export class ChatService {
         id: conversationId,
         kbId,
         createdById: userId,
+        deletedAt: null,
       },
     });
 
@@ -482,6 +484,27 @@ export class ChatService {
         })),
       })),
     };
+  }
+
+  async deleteConversation(userId: string, kbId: string, conversationId: string): Promise<void> {
+    const conv = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        kbId,
+        createdById: userId,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+
+    if (!conv) {
+      throw new NotFoundException('会话不存在或无权访问');
+    }
+
+    await prisma.conversation.update({
+      where: { id: conv.id },
+      data: { deletedAt: new Date() },
+    });
   }
 
   validateChatRequest(query: string): void {

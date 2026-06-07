@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Body,
   Param,
   Res,
@@ -162,5 +163,22 @@ export class ChatController {
     @CurrentUser() user: User,
   ): Promise<ConversationDetailResponse> {
     return this.chatService.getConversationDetail(user.id, kbId, conversationId);
+  }
+
+  @Delete(':kbId/conversations/:conversationId')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '逻辑删除会话' })
+  @ApiParam({ name: 'kbId', description: 'KB ID' })
+  @ApiParam({ name: 'conversationId', description: '会话 ID' })
+  @ApiResponse({ status: 204, description: '删除成功' })
+  @ApiResponse({ status: 401, description: '未认证', type: ChatErrorResponse })
+  @ApiResponse({ status: 404, description: '会话不存在或无权访问', type: ChatErrorResponse })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteConversation(
+    @Param('kbId') kbId: string,
+    @Param('conversationId') conversationId: string,
+    @CurrentUser() user: User,
+  ): Promise<void> {
+    await this.chatService.deleteConversation(user.id, kbId, conversationId);
   }
 }

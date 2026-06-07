@@ -1,12 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Loader2, MessagesSquare, PlusCircle, Sparkles } from 'lucide-react';
+import { ArrowRight, Loader2, MessagesSquare, PlusCircle, Sparkles, Trash2 } from 'lucide-react';
 import type { ConversationResponse, DocumentResponse } from '@devbrain/api/client';
 import { Button } from '@/components/ui/button';
 import { formatRelative } from './kb-detail-format';
 import { SUGGESTED_PROMPTS } from './kb-detail-prompts';
-import type { DocumentStats } from './use-kb-detail';
+import { useDeleteConversation, type DocumentStats } from './use-kb-detail';
 
 interface KbDetailSidebarProps {
   canChat: boolean;
@@ -23,6 +24,9 @@ export function KbDetailSidebar({
   kbId,
   stats,
 }: KbDetailSidebarProps) {
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const deleteMutation = useDeleteConversation(kbId);
+
   return (
     <aside className="space-y-4">
       <div className="overflow-hidden rounded-lg border border-border/60 bg-card divide-y divide-border/30">
@@ -54,22 +58,79 @@ export function KbDetailSidebar({
           <div className="px-2 pb-3">
             {conversations.length > 0 ? (
               <ul className="space-y-0.5">
-                {conversations.slice(0, 4).map((conv) => (
-                  <li key={conv.id}>
-                    <Link
-                      href={`/kb/${kbId}/chat?conversation=${conv.id}`}
-                      className="group flex items-start justify-between gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-muted"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium">{conv.title || '未命名对话'}</p>
-                        <p className="mt-0.5 text-[10px] text-muted-foreground">
-                          {formatRelative(conv.updatedAt)}
-                        </p>
+                {conversations.slice(0, 4).map((conv) => {
+                  const isConfirming = confirmingId === conv.id;
+                  const isDeleting = deleteMutation.isPending && deleteMutation.variables === conv.id;
+
+                  if (isConfirming) {
+                    return (
+                      <li key={conv.id}>
+                        <div className="flex items-center justify-between gap-2 rounded-md bg-destructive/5 px-2 py-1.5">
+                          <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                            删除「{conv.title || '未命名对话'}」？
+                          </span>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-[11px]"
+                              onClick={() => setConfirmingId(null)}
+                              disabled={isDeleting}
+                            >
+                              取消
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="h-6 px-2 text-[11px]"
+                              onClick={() =>
+                                deleteMutation.mutate(conv.id, {
+                                  onSettled: () => setConfirmingId(null),
+                                })
+                              }
+                              disabled={isDeleting}
+                            >
+                              {isDeleting ? '删除中…' : '删除'}
+                            </Button>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  }
+
+                  return (
+                    <li key={conv.id}>
+                      <div className="group relative">
+                        <Link
+                          href={`/kb/${kbId}/chat?conversation=${conv.id}`}
+                          className="flex items-start gap-2 rounded-md px-2 py-1.5 pr-8 transition-colors hover:bg-muted"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-medium">{conv.title || '未命名对话'}</p>
+                            <p className="mt-0.5 text-[10px] text-muted-foreground">
+                              {formatRelative(conv.updatedAt)}
+                            </p>
+                          </div>
+                        </Link>
+                        <button
+                          type="button"
+                          aria-label="删除对话"
+                          title="删除对话"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setConfirmingId(conv.id);
+                          }}
+                          className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive focus:opacity-100 group-hover:opacity-100"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       </div>
-                      <ArrowRight className="mt-1 h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                    </Link>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="px-2 py-2 text-xs text-muted-foreground">

@@ -228,6 +228,7 @@ model Conversation {
   title       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   kb             KnowledgeBase @relation(fields: [kbId], references: [id], onDelete: Cascade)
   createdBy      User          @relation(fields: [createdById], references: [id])

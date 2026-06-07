@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   ConversationListResponse,
   ConversationResponse,
@@ -32,6 +32,19 @@ export function useKbConversations(kbId: string, enabled: boolean) {
     queryKey: ['kb', kbId, 'conversations'],
     queryFn: () => apiFetch<ConversationListResponse>(`/api/kbs/${kbId}/conversations`),
     enabled,
+  });
+}
+
+export function useDeleteConversation(kbId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (conversationId: string) =>
+      apiFetch<void>(`/api/kbs/${kbId}/conversations/${conversationId}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['kb', kbId, 'conversations'] });
+    },
   });
 }
 
