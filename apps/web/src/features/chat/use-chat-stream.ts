@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Sentry from '@sentry/nextjs';
 import { useAuthStore } from '@/stores/auth-store';
 import type { CitationResponse } from '@devbrain/api/client';
@@ -31,6 +32,14 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
   const [streamContext, setStreamContext] = useState<StreamContext | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const partialContentRef = useRef('');
+  const partialCtxRef = useRef<StreamContext | null>(null);
+  const stoppedRef = useRef(false);
+  const queryClient = useQueryClient();
+
+  const invalidateConversations = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['kb', kbId, 'conversations'] });
+  }, [queryClient, kbId]);
 
   const fetchCitations = useCallback(
     async (conversationId: string, assistantMessageId: string) => {
@@ -62,6 +71,9 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
       setRejectionCode(null);
       setIsStreaming(true);
       setStreamingContent('');
+      partialContentRef.current = '';
+      partialCtxRef.current = null;
+      stoppedRef.current = false;
 
       const userMsg: ChatMessage = {
         id: `user-${Date.now()}`,
@@ -145,12 +157,14 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
 
               if (event.type === 'delta' && event.content) {
                 accumulatedContent += event.content;
+                partialContentRef.current = accumulatedContent;
                 setStreamingContent(accumulatedContent);
                 if (event.conversationId && event.assistantMessageId) {
                   ctx = {
                     conversationId: event.conversationId,
                     assistantMessageId: event.assistantMessageId,
                   };
+                  partialCtxRef.current = ctx;
                   setStreamContext(ctx);
                 }
               } else if (event.type === 'delta' && event.conversationId) {
@@ -158,17 +172,23 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
                   conversationId: event.conversationId,
                   assistantMessageId: event.assistantMessageId,
                 };
+                partialCtxRef.current = ctx;
                 setStreamContext(ctx);
               } else if (event.type === 'rejection') {
                 setRejectionCode(event.code || 'unknown');
                 setIsStreaming(false);
                 setStreamingContent('');
+                partialContentRef.current = '';
+                partialCtxRef.current = null;
+                invalidateConversations();
                 return;
               } else if (event.type === 'error') {
                 const errMsg = event.message || '生成回答时出错';
                 setError(errMsg);
                 setIsStreaming(false);
                 setStreamingContent('');
+                partialContentRef.current = '';
+                partialCtxRef.current = null;
                 Sentry.captureException(new Error(errMsg), {
                   tags: {
                     route: `/api/kbs/${kbId}/chat`,
@@ -177,6 +197,7 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
                     messageId: ctx?.assistantMessageId,
                   },
                 });
+                invalidateConversations();
                 return;
               } else if (event.type === 'done') {
                 const finalCtx = ctx || {
@@ -194,10 +215,13 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
                 setMessages((prev) => [...prev, assistantMsg]);
                 setStreamingContent('');
                 setIsStreaming(false);
+                partialContentRef.current = '';
+                partialCtxRef.current = null;
 
                 if (finalCtx.assistantMessageId && finalCtx.conversationId) {
                   void fetchCitations(finalCtx.conversationId, finalCtx.assistantMessageId);
                 }
+                invalidateConversations();
                 return;
               }
             } catch {
@@ -219,7 +243,10 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
         setIsStreaming(false);
         setStreamingContent('');
       } catch (err) {
-        if ((err as Error).name === 'AbortError') return;
+        if ((err as Error).name === 'AbortError') {
+          // stop 路径已经在 stopStreaming 中提交 partial 与重置状态
+          return;
+        }
         const errMsg = err instanceof Error ? err.message : '网络错误';
         setError(errMsg);
         setIsStreaming(false);
@@ -232,16 +259,38 @@ export function useChatStream({ kbId, onError }: UseChatStreamOptions) {
             conversationId: streamContext?.conversationId,
           },
         });
+        invalidateConversations();
       }
     },
-    [kbId, isStreaming, fetchCitations, onError, streamContext?.conversationId],
+    [kbId, isStreaming, fetchCitations, onError, streamContext?.conversationId, invalidateConversations],
   );
 
   const stopStreaming = useCallback(() => {
+    if (stoppedRef.current) return;
+    stoppedRef.current = true;
+
+    const partial = partialContentRef.current;
+    const ctx = partialCtxRef.current;
+
+    if (partial && ctx?.assistantMessageId) {
+      const abortedMsg: ChatMessage = {
+        id: ctx.assistantMessageId,
+        role: 'assistant',
+        content: partial,
+        status: 'aborted',
+      };
+      setMessages((prev) => [...prev, abortedMsg]);
+    }
+
     abortRef.current?.abort();
     setIsStreaming(false);
     setStreamingContent('');
-  }, []);
+    partialContentRef.current = '';
+    partialCtxRef.current = null;
+    if (ctx?.conversationId) {
+      invalidateConversations();
+    }
+  }, [invalidateConversations]);
 
   const clearError = useCallback(() => setError(null), []);
 
