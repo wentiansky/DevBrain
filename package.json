@@ -12,6 +12,7 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "check:migrations": "node scripts/check-migrations.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css,yaml,yml}\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css,yaml,yml}\" --ignore-path .gitignore",
     "gen:openapi": "pnpm --filter @devbrain/api gen:openapi",

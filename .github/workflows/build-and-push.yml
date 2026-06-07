@@ -15,8 +15,18 @@ env:
   IMAGE_PREFIX: devbrain
 
 jobs:
+  check-migrations:
+    name: 校验 migration SQL
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+      - name: 扫描 forbidden DROP INDEX
+        run: node scripts/check-migrations.mjs
+
   build-and-push:
     name: 构建 ${{ matrix.service }}
+    needs: check-migrations
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
