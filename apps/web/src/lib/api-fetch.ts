@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/nextjs';
 import { useAuthStore } from '@/stores/auth-store';
 import type { AuthResponse } from '@devbrain/api/client';
 import { shouldReportHttpError } from './sentry';
+import { clearQueryCache } from './query-client';
 
 const AUTH_LOGIN = '/auth/login';
 const AUTH_REGISTER = '/auth/register';
@@ -47,6 +48,7 @@ async function doRefresh(): Promise<AuthResponse | null> {
       useAuthStore.getState().setAuth(data);
     } else {
       useAuthStore.getState().clearAuth();
+      clearQueryCache();
     }
     return data;
   } catch {
@@ -108,6 +110,7 @@ export async function apiFetch<T = unknown>(url: string, options: RequestInit = 
       });
     } else {
       useAuthStore.getState().clearAuth();
+      clearQueryCache();
       redirectToLogin();
       throw new Error('登录已过期，请重新登录');
     }
@@ -145,6 +148,7 @@ export async function authLogin(email: string, password: string): Promise<AuthRe
     headers: { [SKIP_REFRESH_HEADER]: '1' },
     body: JSON.stringify({ email, password }),
   });
+  clearQueryCache();
   useAuthStore.getState().setAuth(data);
   return data;
 }
@@ -155,6 +159,7 @@ export async function authRegister(email: string, password: string): Promise<Aut
     headers: { [SKIP_REFRESH_HEADER]: '1' },
     body: JSON.stringify({ email, password }),
   });
+  clearQueryCache();
   useAuthStore.getState().setAuth(data);
   return data;
 }
@@ -190,5 +195,6 @@ export async function initializeAuth(): Promise<void> {
 export function logout(): void {
   authLogout().finally(() => {
     useAuthStore.getState().clearAuth();
+    clearQueryCache();
   });
 }
