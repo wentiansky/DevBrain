@@ -196,5 +196,8 @@ export function logout(): void {
   authLogout().finally(() => {
     useAuthStore.getState().clearAuth();
     clearQueryCache();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
   });
 }

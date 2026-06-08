@@ -64,6 +64,7 @@ describe('用户切换时清理 QueryClient cache', () => {
 
     expect(qc.getQueryData(['kbs'])).toBeUndefined();
     expect(useAuthStore.getState().user).toBeNull();
+    expect(window.location.href).toBe('/');
   });
 
   it('authLogin 成功时清掉旧用户的 cache，再写入新用户 auth', async () => {
