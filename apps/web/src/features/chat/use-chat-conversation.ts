@@ -1,5 +1,6 @@
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-fetch';
 import type { ConversationDetailResponse } from '@devbrain/api/client';
 import type { ChatMessage } from './use-chat-stream';
@@ -18,37 +19,32 @@ export function useChatConversation({
   loadHistory,
 }: UseChatConversationOptions) {
   const router = useRouter();
-
-  const fetchAndLoadHistory = useCallback(
-    async (convId: string) => {
-      try {
-        const detail = await apiFetch<ConversationDetailResponse>(
-          `/api/kbs/${kbId}/conversations/${convId}`,
-        );
-        const historyMessages: ChatMessage[] = (detail.messages ?? []).map(
-          (m) => ({
-            id: m.id,
-            role: m.role as 'user' | 'assistant',
-            content: m.content ?? '',
-            status: m.status,
-            errorCode: m.errorCode,
-            errorMessage: m.errorMessage,
-            citations: m.citations ?? undefined,
-          }),
-        );
-        loadHistory(historyMessages);
-      } catch {
-        // 历史加载失败不阻塞主流程
-      }
+  const historyQuery = useQuery<ChatMessage[]>({
+    queryKey: ['kb', kbId, 'conversation', conversationIdParam],
+    queryFn: async () => {
+      if (!conversationIdParam) return [];
+      const detail = await apiFetch<ConversationDetailResponse>(
+        `/api/kbs/${kbId}/conversations/${conversationIdParam}`,
+      );
+      return (detail.messages ?? []).map((m) => ({
+        id: m.id,
+        role: m.role as 'user' | 'assistant',
+        content: m.content ?? '',
+        status: m.status,
+        errorCode: m.errorCode,
+        errorMessage: m.errorMessage,
+        citations: m.citations ?? undefined,
+      }));
     },
-    [kbId, loadHistory],
-  );
+    enabled: Boolean(conversationIdParam),
+    retry: false,
+  });
 
   useEffect(() => {
-    if (conversationIdParam) {
-      fetchAndLoadHistory(conversationIdParam);
+    if (conversationIdParam && historyQuery.data) {
+      loadHistory(historyQuery.data);
     }
-  }, [conversationIdParam, fetchAndLoadHistory]);
+  }, [conversationIdParam, historyQuery.data, loadHistory]);
 
   useEffect(() => {
     if (streamConversationId && !conversationIdParam) {
@@ -56,4 +52,6 @@ export function useChatConversation({
       router.replace(url, { scroll: false });
     }
   }, [streamConversationId, conversationIdParam, kbId, router]);
+
+  return { isHistoryLoading: Boolean(conversationIdParam) && historyQuery.isFetching };
 }

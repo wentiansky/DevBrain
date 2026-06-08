@@ -52,7 +52,7 @@ export function ChatClient({
     closeSourcePanel,
   } = useChatCitation(messages);
 
-  useChatConversation({
+  const { isHistoryLoading } = useChatConversation({
     kbId,
     conversationIdParam,
     streamConversationId: streamContext?.conversationId,
@@ -79,7 +79,9 @@ export function ChatClient({
   if (kbLoading) return <ChatLoadingState />;
   if (!kb) return <ChatNotFoundState onBack={() => router.push('/')} />;
 
-  const showSuggest = canChat && messages.length === 0 && !isStreaming;
+  const showHistoryLoading = Boolean(conversationIdParam) && isHistoryLoading;
+  const showSuggest =
+    canChat && !conversationIdParam && messages.length === 0 && !isStreaming;
 
   return (
     <div className="flex h-[calc(100dvh-3.5rem)]">
@@ -112,7 +114,7 @@ export function ChatClient({
               <ChatMessages
                 messages={messages}
                 streamingContent={streamingContent}
-                isStreaming={isStreaming}
+                isStreaming={isStreaming || showHistoryLoading}
                 rejectionCode={rejectionCode}
                 error={error}
                 activeCitationId={activeCitationId}
