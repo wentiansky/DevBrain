@@ -7,7 +7,10 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "pnpm --filter @devbrain/db build && (pnpm --filter @devbrain/api dev &) && npx wait-on tcp:3001 --timeout 30000 && pnpm --parallel --filter @devbrain/db --filter @devbrain/web --filter @devbrain/worker dev",
+    "dev": "pnpm run dev:prepare && concurrently -k -n db,api,worker,web -c blue,green,magenta,cyan \"pnpm --filter @devbrain/db dev\" \"pnpm --filter @devbrain/api dev\" \"pnpm --filter @devbrain/worker dev\" \"pnpm run dev:web\"",
+    "dev:infra": "docker compose up -d postgres redis",
+    "dev:prepare": "pnpm --filter @devbrain/db build",
+    "dev:web": "wait-on http-get://localhost:3001/readyz --timeout 30000 && pnpm --filter @devbrain/web dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
@@ -33,7 +36,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "concurrently": "^10.0.3",
     "prettier": "^3.5.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "wait-on": "^9.0.10"
   }
 }
