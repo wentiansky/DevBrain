@@ -5,6 +5,7 @@ import { KbDetailHeader } from './kb-detail-header';
 import { KbDetailSidebar } from './kb-detail-sidebar';
 import { KbDetailLoading, KbDetailLoadError, KbDetailNotFound } from './kb-detail-states';
 import { KbDocumentsWorkspace } from './kb-documents-workspace';
+import { KbDropOverlay } from './kb-drop-overlay';
 import {
   useConversationItems,
   useKbConversations,
@@ -50,6 +51,7 @@ export function KbDetailClient() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <KbDropOverlay kbId={kbId} />
       <KbDetailHeader kb={kb} stats={stats} canChat={canChat} onBack={() => router.push('/')} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">

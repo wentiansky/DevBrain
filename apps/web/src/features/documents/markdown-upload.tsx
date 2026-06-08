@@ -1,13 +1,9 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
-import * as Sentry from '@sentry/nextjs';
+import { useRef, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, UploadCloud } from 'lucide-react';
-import { presignUpload, createDocument, useInvalidateDocumentList } from './use-documents';
-
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
-const ALLOWED_EXTS = ['md', 'markdown', 'mdown', 'mkdn', 'mkd', 'mdwn'];
+import { useUploadDocument } from './use-upload-document';
 
 interface MarkdownUploadProps {
   kbId: string;
@@ -15,89 +11,9 @@ interface MarkdownUploadProps {
 }
 
 export function MarkdownUpload({ kbId, variant = 'full' }: MarkdownUploadProps) {
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { uploadFile, uploading, error } = useUploadDocument(kbId);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const invalidateDocuments = useInvalidateDocumentList(kbId);
-
-  const uploadFile = useCallback(
-    async (file: File) => {
-      setError(null);
-
-      if (file.size > MAX_FILE_SIZE) {
-        setError('文件超过 20MB 上限');
-        return;
-      }
-
-      const ext = file.name.split('.').pop()?.toLowerCase();
-      if (!ext || !ALLOWED_EXTS.includes(ext)) {
-        setError('不支持的文件类型，请上传 Markdown 文件');
-        return;
-      }
-
-      setUploading(true);
-
-      try {
-        const presignRes = await presignUpload({
-          kbId,
-          fileName: file.name,
-          mimeType: file.type || 'text/markdown',
-          sizeBytes: file.size,
-        });
-
-        const putRes = await fetch(presignRes.uploadUrl, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': file.type || 'text/markdown',
-            'Content-Length': String(file.size),
-          },
-          body: file,
-        });
-
-        if (!putRes.ok) {
-          const err = new Error('文件直传失败');
-          Sentry.captureException(err, {
-            tags: {
-              kbId,
-              putStatus: putRes.status,
-              fileExtension: ext,
-              sizeBytes: file.size,
-            },
-          });
-          throw err;
-        }
-
-        await createDocument({
-          kbId,
-          objectKey: presignRes.objectKey,
-          uploadToken: presignRes.uploadToken,
-          originalName: file.name,
-          mimeType: file.type || 'text/markdown',
-          sizeBytes: file.size,
-        });
-
-        invalidateDocuments();
-      } catch (err) {
-        const errMsg = (err as Error).message || '上传失败，请重试';
-        setError(errMsg);
-
-        if (!(err as Error).message?.includes('直传') && errMsg !== '文件直传失败') {
-          Sentry.captureException(err instanceof Error ? err : new Error(errMsg), {
-            tags: {
-              kbId,
-              fileExtension: ext,
-              sizeBytes: file.size,
-              mimeType: file.type || 'text/markdown',
-            },
-          });
-        }
-      } finally {
-        setUploading(false);
-      }
-    },
-    [kbId, invalidateDocuments],
-  );
 
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -11,6 +11,13 @@ export interface AuthConfig {
 }
 
 const DEV_DEFAULT_PEPPER = 'dev-pepper-do-not-use-in-production';
+const DEV_DEFAULT_JWT_ACCESS_SECRET = 'change-me-access-secret';
+const ACCESS_TOKEN_TTL_DEFAULT_SECONDS = 900;
+const ACCESS_TOKEN_TTL_MAX_SECONDS = 900;
+const REFRESH_TOKEN_TTL_DEFAULT_SECONDS = 604800;
+const REFRESH_TOKEN_TTL_MAX_SECONDS = 604800;
+const DEFAULT_COOKIE_NAME = 'devbrain_refresh';
+const DEFAULT_COOKIE_PATH = '/';
 
 @Injectable()
 export class AuthConfigService {
@@ -28,43 +35,43 @@ export class AuthConfigService {
       );
     }
 
-    if (isProduction && (!jwtAccessSecret || jwtAccessSecret === 'change-me-access-secret')) {
+    if (isProduction && (!jwtAccessSecret || jwtAccessSecret === DEV_DEFAULT_JWT_ACCESS_SECRET)) {
       throw new Error(
         'NODE_ENV=production 时 JWT_ACCESS_SECRET 不能使用默认值，API 拒绝启动',
       );
     }
 
     const accessTtlRaw = parseInt(
-      process.env.AUTH_ACCESS_TOKEN_TTL_SECONDS ?? '900',
+      process.env.AUTH_ACCESS_TOKEN_TTL_SECONDS ?? String(ACCESS_TOKEN_TTL_DEFAULT_SECONDS),
       10,
     );
     const refreshTtlRaw = parseInt(
-      process.env.AUTH_REFRESH_TOKEN_TTL_SECONDS ?? '604800',
+      process.env.AUTH_REFRESH_TOKEN_TTL_SECONDS ?? String(REFRESH_TOKEN_TTL_DEFAULT_SECONDS),
       10,
     );
 
-    const accessTtl = Math.min(accessTtlRaw, 900);
-    const refreshTtl = Math.min(refreshTtlRaw, 604800);
+    const accessTtl = Math.min(accessTtlRaw, ACCESS_TOKEN_TTL_MAX_SECONDS);
+    const refreshTtl = Math.min(refreshTtlRaw, REFRESH_TOKEN_TTL_MAX_SECONDS);
 
-    if (accessTtlRaw > 900) {
+    if (accessTtlRaw > ACCESS_TOKEN_TTL_MAX_SECONDS) {
       this.logger.warn(
-        `AUTH_ACCESS_TOKEN_TTL_SECONDS=${accessTtlRaw} 超过上限，已钳制为 900 秒`,
+        `AUTH_ACCESS_TOKEN_TTL_SECONDS=${accessTtlRaw} 超过上限，已钳制为 ${ACCESS_TOKEN_TTL_MAX_SECONDS} 秒`,
       );
     }
-    if (refreshTtlRaw > 604800) {
+    if (refreshTtlRaw > REFRESH_TOKEN_TTL_MAX_SECONDS) {
       this.logger.warn(
-        `AUTH_REFRESH_TOKEN_TTL_SECONDS=${refreshTtlRaw} 超过上限，已钳制为 604800 秒`,
+        `AUTH_REFRESH_TOKEN_TTL_SECONDS=${refreshTtlRaw} 超过上限，已钳制为 ${REFRESH_TOKEN_TTL_MAX_SECONDS} 秒`,
       );
     }
 
     this.config = {
       jwtAccessSecret:
-        process.env.JWT_ACCESS_SECRET ?? 'change-me-access-secret',
+        process.env.JWT_ACCESS_SECRET ?? DEV_DEFAULT_JWT_ACCESS_SECRET,
       accessTokenTtlSeconds: accessTtl,
       refreshTokenTtlSeconds: refreshTtl,
       refreshTokenPepper: pepper ?? DEV_DEFAULT_PEPPER,
-      cookieName: process.env.AUTH_COOKIE_NAME ?? 'devbrain_refresh',
-      cookiePath: process.env.AUTH_COOKIE_PATH ?? '/',
+      cookieName: process.env.AUTH_COOKIE_NAME ?? DEFAULT_COOKIE_NAME,
+      cookiePath: process.env.AUTH_COOKIE_PATH ?? DEFAULT_COOKIE_PATH,
       cookieSecure:
         process.env.AUTH_COOKIE_SECURE === 'true'
           ? true
