@@ -21,7 +21,8 @@
     "gen:openapi": "pnpm --filter @devbrain/api gen:openapi",
     "gen:client": "pnpm --filter @devbrain/api gen:client",
     "release:vps": "bash scripts/release-vps.sh",
-    "test:e2e": "pnpm --filter @devbrain/web test:e2e"
+    "test:e2e": "pnpm --filter @devbrain/web test:e2e",
+    "prepare": "husky"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "concurrently": "^10.0.3",
+    "husky": "^9.1.7",
     "prettier": "^3.5.0",
     "typescript": "^5.7.0",
     "wait-on": "^9.0.10"

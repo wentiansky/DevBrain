@@ -1,0 +1,25 @@
+#!/bin/sh
+# 漂移检查：DTO/controller 改了但 OpenAPI/client 没跟着改 → 阻止 push
+
+if ! git rev-parse --verify origin/main >/dev/null 2>&1; then
+  exit 0
+fi
+
+changed=$(git diff --name-only origin/main HEAD)
+src=$(echo "$changed" | grep -E 'apps/api/src/.+\.(dto|controller)\.ts$' || true)
+gen=$(echo "$changed" | grep -E 'apps/api/(openapi\.json|client/)' || true)
+
+if [ -n "$src" ] && [ -z "$gen" ]; then
+  echo ""
+  echo "✗ OpenAPI 漂移：DTO/controller 改动未同步到 generated 产物"
+  echo ""
+  echo "改动的源文件："
+  echo "$src" | sed 's/^/  - /'
+  echo ""
+  echo "请在本地跑："
+  echo "  pnpm gen:openapi && pnpm gen:client"
+  echo "然后把 apps/api/openapi.json 和 apps/api/client/ 一起 commit。"
+  echo ""
+  echo "应急绕过：git push --no-verify（不建议）"
+  exit 1
+fi
