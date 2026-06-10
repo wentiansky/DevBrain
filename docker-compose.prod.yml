@@ -20,6 +20,8 @@ services:
     pull_policy: always
 
   caddy:
+    environment:
+      DEVBRAIN_DOMAIN: ${DEVBRAIN_DOMAIN:?DEVBRAIN_DOMAIN is required when using Caddyfile.prod}
     ports:
       - '${CADDY_HTTPS_PORT:-443}:443'
       - '${CADDY_HTTPS_PORT:-443}:443/udp'

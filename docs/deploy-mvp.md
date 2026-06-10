@@ -15,10 +15,10 @@
 - VPS：Ubuntu，示例为 Hetzner CPX22。
 - 本地仓库已推送到 GitHub `main`。
 - GitHub Actions 已成功构建并推送 GHCR 镜像：
-  - `ghcr.io/wentiansky/devbrain-api:sha-<SHA>`
-  - `ghcr.io/wentiansky/devbrain-web:sha-<SHA>`
-  - `ghcr.io/wentiansky/devbrain-worker:sha-<SHA>`
-  - `ghcr.io/wentiansky/devbrain-postgres:sha-<SHA>`
+  - `ghcr.io/<owner>/devbrain-api:sha-<SHA>`
+  - `ghcr.io/<owner>/devbrain-web:sha-<SHA>`
+  - `ghcr.io/<owner>/devbrain-worker:sha-<SHA>`
+  - `ghcr.io/<owner>/devbrain-postgres:sha-<SHA>`
 - GitHub PAT 已创建，权限只需要 `read:packages`。
 - GitHub Repository Variable `NEXT_PUBLIC_SENTRY_DSN` 已配置，否则当前 Web 镜像构建会失败。
 - DashScope API Key 已准备好。
@@ -70,7 +70,7 @@ docker compose version
 在 VPS 上执行：
 
 ```bash
-echo "<GHCR_READ_ONLY_PAT>" | docker login ghcr.io -u wentiansky --password-stdin
+echo "<GHCR_READ_ONLY_PAT>" | docker login ghcr.io -u <github-user> --password-stdin
 ```
 
 成功标准：
@@ -84,7 +84,7 @@ Login Succeeded
 ```bash
 mkdir -p /opt/devbrain
 cd /opt/devbrain
-git clone --depth=1 https://github.com/wentiansky/DevBrain.git .
+git clone --depth=1 https://github.com/<owner>/devbrain.git .
 git fetch --depth=1 origin <SHA>
 git checkout <SHA>
 ```
@@ -134,7 +134,7 @@ nano .env
 至少修改这些字段：
 
 ```env
-REGISTRY=ghcr.io/wentiansky/
+REGISTRY=ghcr.io/<owner>/
 IMAGE_PREFIX=devbrain-
 IMAGE_TAG=sha-<SHA>
 
@@ -245,21 +245,23 @@ P0 性能优化专项 `optimize-web-first-load-perf` 启用后，`infra/caddy/` 
 1. 已购买域名，已把 A 记录指向 VPS 公网 IP，`dig <domain> +short` 能解析到 IP。
 2. VPS 防火墙/安全组**同时开放 `80/tcp` 与 `443/tcp`**；ACME HTTP-01 校验依赖 `:80` 可达，浏览器走 `:443`，缺一不可。
 3. 生产启动命令必须带 `docker-compose.prod.yml`，让 caddy 服务包含 `'${CADDY_HTTPS_PORT:-443}:443'`，否则即便 ACME 签发成功，HTTPS 流量也无法到达容器。
-4. 生产域名在 `infra/caddy/Caddyfile.prod` 内维护，不需要通过 `.env` 的 `WEB_DOMAIN` / `ACME_EMAIL` 管理。`.env` 中追加 `CADDY_CONFIG=Caddyfile.prod`。
+4. 生产域名通过 `.env` 的 `DEVBRAIN_DOMAIN` 注入到 Caddyfile.prod 中的 `{$DEVBRAIN_DOMAIN}` 占位符，Caddy 同时绑定裸域和 `www` 子域；不再使用 `WEB_DOMAIN` / `ACME_EMAIL`。`.env` 中追加 `DEVBRAIN_DOMAIN=<actual-domain>` 和 `CADDY_CONFIG=Caddyfile.prod`，否则 compose 会 fail-fast 拒绝启动。
 5. `docker compose ps` 确认 `web (healthy)` 与 `api (healthy)` 同时满足后再接流量。
 
 切换步骤：
 
 ```bash
-# 编辑 .env，追加 prod 配置项
+# 编辑 .env，追加 prod 配置项（DEVBRAIN_DOMAIN 必须设为真实域名）
 cat >> .env <<'EOF'
+DEVBRAIN_DOMAIN=<actual-domain>
 CADDY_CONFIG=Caddyfile.prod
 EOF
 
-# 校验两份 Caddyfile 语法（prod 域名已在文件内）
+# 校验两份 Caddyfile 语法（prod 需要注入 DEVBRAIN_DOMAIN）
 docker run --rm -v $PWD/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
   caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
 docker run --rm \
+  -e DEVBRAIN_DOMAIN=<actual-domain> \
   -v $PWD/infra/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro \
   caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
 
@@ -520,7 +522,7 @@ curl -I http://<vps-ip>/api/healthz
 解决方法：
 
 ```bash
-echo "<GHCR_READ_ONLY_PAT>" | docker login ghcr.io -u wentiansky --password-stdin
+echo "<GHCR_READ_ONLY_PAT>" | docker login ghcr.io -u <github-user> --password-stdin
 $COMPOSE pull postgres api web worker
 ```
 

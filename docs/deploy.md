@@ -181,7 +181,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 docker compose -f docker-compose.yml -f docker-compose.prod.yml config
 ```
 
-恢复完整生产模式时，不修改 dev `Caddyfile`；改用 `docker-compose.prod.yml`，把生产域名维护在 `infra/caddy/Caddyfile.prod`，并在 `.env` 中配置 `CADDY_CONFIG=Caddyfile.prod`。
+恢复完整生产模式时，不修改 dev `Caddyfile`；改用 `docker-compose.prod.yml`，在 `.env` 中配置 `DEVBRAIN_DOMAIN=<actual-domain>` 与 `CADDY_CONFIG=Caddyfile.prod`，由 compose 注入 Caddyfile.prod 中的 `{$DEVBRAIN_DOMAIN}` 占位符。
 
 ### 1.5 Backup 暂缓项
 
@@ -498,7 +498,7 @@ $COMPOSE start api web worker
 
 1. 域名 A 记录指向 VPS 公网 IP。
 2. `sudo ufw allow 443/tcp`。
-3. 在 `infra/caddy/Caddyfile.prod` 中将域名替换为你的生产域名。
+3. `.env` 增加 `DEVBRAIN_DOMAIN=<actual-domain>`（compose 会注入到 Caddyfile.prod 的 `{$DEVBRAIN_DOMAIN}` 占位符）。
 4. `.env` 增加 `CADDY_CONFIG=Caddyfile.prod`。
 5. `.env` 修改 `CORS_ORIGIN=https://<your-domain>`。
 6. `.env` 修改 `AUTH_COOKIE_SECURE=true`。

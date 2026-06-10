@@ -1,6 +1,6 @@
-# 域名配置（<your-domain>）
+# 域名配置
 
-本文档记录当前生产域名配置方式。当前仓库的 `infra/caddy/Caddyfile.prod` 已直接写入 `<your-domain>, www.<your-domain>`，生产域名不通过 `.env` 的 `WEB_DOMAIN` 或 `ACME_EMAIL` 管理。切换域名时必须修改 `Caddyfile.prod`，并使用 `docker-compose.yml + docker-compose.prod.yml` 启动，否则 443 端口和 prod Caddyfile mount 不会生效。
+本文档记录生产域名配置方式。`infra/caddy/Caddyfile.prod` 通过 `{$DEVBRAIN_DOMAIN}` 占位符引用环境变量，由 `docker-compose.prod.yml` 把 `.env` 中的 `DEVBRAIN_DOMAIN` 注入到 caddy 容器（Caddy 同时绑定裸域和 `www` 子域）。切换域名时只需改 `.env` 中的 `DEVBRAIN_DOMAIN`，并使用 `docker-compose.yml + docker-compose.prod.yml` 启动，否则 443 端口和 prod Caddyfile mount 不会生效。
 
 ## 1. 配置 DNS
 
@@ -11,10 +11,10 @@ Porkbun 删除默认 Parking Page 记录：
 
 新增 DNS：
 
-| Type | Host | Value           |
-| ---- | ---- | --------------- |
-| A    | @    | <vps-ip> |
-| A    | www  | <vps-ip> |
+| Type | Host | Value       |
+| ---- | ---- | ----------- |
+| A    | @    | `<vps-ip>` |
+| A    | www  | `<vps-ip>` |
 
 验证：
 
@@ -35,24 +35,24 @@ dig @curitiba.ns.porkbun.com <your-domain>
 当前项目使用双 Caddyfile 方案：
 
 - `infra/caddy/Caddyfile`：开发/IP 试用环境，监听 `:80`，反代 `/auth/*`、`/api/*`、`/storage/local/*`，并为 Next.js 静态资源设置缓存头。
-- `infra/caddy/Caddyfile.prod`：生产域名环境，域名在文件内硬编码，自动申请 Let's Encrypt 证书，保持与 dev Caddyfile 一致的路由和缓存结构。
+- `infra/caddy/Caddyfile.prod`：生产域名环境，用 `{$DEVBRAIN_DOMAIN}` 占位符引用 `.env` 中的同名变量，自动申请 Let's Encrypt 证书，保持与 dev Caddyfile 一致的路由和缓存结构。
 
-生产 compose override 通过以下配置切换 mount：
+生产 compose override 通过以下配置切换 mount 并注入域名：
 
 ```yaml
-volumes:
-  - ./infra/caddy/${CADDY_CONFIG:-Caddyfile.prod}:/etc/caddy/Caddyfile:ro
+caddy:
+  environment:
+    DEVBRAIN_DOMAIN: ${DEVBRAIN_DOMAIN:?DEVBRAIN_DOMAIN is required when using Caddyfile.prod}
+  volumes:
+    - ./infra/caddy/${CADDY_CONFIG:-Caddyfile.prod}:/etc/caddy/Caddyfile:ro
 ```
 
 在生产 VPS 上执行：
 
 ```bash
 cd /opt/devbrain
-# 将 Caddyfile.prod 中的 <your-domain> 替换为你的域名
-sed -i 's/<your-domain>/<your-domain>/g' infra/caddy/Caddyfile.prod
-sed -i 's/www\.<your-domain>/www.<your-domain>/g' infra/caddy/Caddyfile.prod
-
-# 写入 CADDY_CONFIG 到 .env
+# 在 .env 中设置真实域名
+echo 'DEVBRAIN_DOMAIN=<actual-domain>' >> .env
 echo 'CADDY_CONFIG=Caddyfile.prod' >> .env
 
 # 重启 caddy

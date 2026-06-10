@@ -1,4 +1,4 @@
-<your-domain>, www.<your-domain> {
+{$DEVBRAIN_DOMAIN}, www.{$DEVBRAIN_DOMAIN} {
 	handle /auth/* {
 		reverse_proxy api:3001
 	}
