@@ -17,7 +17,7 @@ DevBrain 是一个面向开发者的 self-hostable RAG 知识库。它支持上�
 
 ## 在线体验
 
-> **<https://<your-domain>>** — 已部署到 VPS，经 Cloudflare CDN 加速，可直接注册试用。
+> **<https://mydevbrain.xyz>** — 已部署到 VPS，经 Cloudflare CDN 加速，可直接注册试用。
 
 ---
 
