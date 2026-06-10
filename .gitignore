@@ -34,6 +34,9 @@ apps/api/scripts/*.js
 apps/api/scripts/*.js.map
 apps/api/scripts/*.d.ts
 
+# VPS 发布脚本 —— 本地保留，不入库
+scripts/release-vps.sh
+
 # Prisma Client 由 packages/db 在构建时生成
 packages/db/src/generated/
 
