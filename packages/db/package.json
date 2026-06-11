@@ -7,7 +7,6 @@
     "dev": "tsc -w",
     "build": "prisma generate && tsc && cp -R src/generated dist/generated",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev --create-only",
     "db:migrate-safe": "node ../../scripts/db-migrate-safe.mjs",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
