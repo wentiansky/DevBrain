@@ -1,17 +1,76 @@
-import { validateMarkdownBuffer } from './processor.service';
+import { buildChunkMetadata, validateMarkdownBuffer } from './processor.service';
 import { DocumentErrorCodes } from '@devbrain/db';
 
 jest.mock('./ingestion', () => ({
   parseMarkdown: jest.fn(() => [{ type: 'paragraph', text: 'mocked', headingPath: [] }]),
   splitBlocks: jest.fn(() => [
-    { content: 'mocked', headingPath: [], blockTypes: ['paragraph'], tokenCount: 10, ordinal: 0, rawText: 'mocked' },
+    {
+      content: 'mocked',
+      headingPath: [],
+      blockTypes: ['paragraph'],
+      tokenCount: 10,
+      ordinal: 0,
+      rawText: 'mocked',
+      overlapText: '',
+      overlapTokenCount: 0,
+    },
   ]),
   computeContentHash: jest.fn(() => 'abc123'),
   CONTENT_HASH_VERSION: 1,
+  tokenCounterMetadata: {
+    tokenCounter: 'js-tiktoken/cl100k_base',
+    tokenCounterKind: 'approximate',
+    encoding: 'cl100k_base',
+    version: '1',
+  },
   generateAnchor: jest.fn(() => 'h/root/c0-abc123'),
   ChunkRepository: jest.fn(() => ({ replaceDocumentChunks: jest.fn() })),
   EmbeddingProviderError: class extends Error { constructor(public errorCode: string, msg: string) { super(msg); } },
 }));
+
+describe('buildChunkMetadata', () => {
+  it('写入 splitter、token counter 和 overlap metadata', () => {
+    const metadata = buildChunkMetadata({
+      content: '[上文]\n上一段\n\n[正文]\n当前段',
+      headingPath: ['标题'],
+      blockTypes: ['paragraph'],
+      tokenCount: 20,
+      ordinal: 1,
+      rawText: '当前段',
+      overlapText: '上一段',
+      overlapTokenCount: 4,
+    });
+
+    expect(metadata.rawText).toBe('当前段');
+    expect(metadata.overlapText).toBe('上一段');
+    expect(metadata.overlapTokenCount).toBe(4);
+    expect(metadata.splitter.version).toBe(2);
+    expect(metadata.splitter.strategy).toBe('markdown-heading-block-overlap');
+    expect(metadata.tokenCounter.tokenCounter).toBe('js-tiktoken/cl100k_base');
+    expect(metadata.tokenCounter.tokenCounterKind).toBe('approximate');
+  });
+
+  it('从实际 splitter config 写入 metadata', () => {
+    const metadata = buildChunkMetadata(
+      {
+        content: '当前段',
+        headingPath: ['标题'],
+        blockTypes: ['paragraph'],
+        tokenCount: 20,
+        ordinal: 1,
+        rawText: '当前段',
+        overlapText: '上一段',
+        overlapTokenCount: 4,
+      },
+      { targetTokens: 128, overlapTokens: 16 },
+    );
+
+    expect(metadata.splitterConfig).toEqual({
+      targetTokens: 128,
+      overlapTokens: 16,
+    });
+  });
+});
 
 describe('validateMarkdownBuffer', () => {
   it('合法 Markdown 返回 null', () => {

@@ -18,6 +18,7 @@
     "bullmq": "^5.77.6",
     "dotenv": "^16.6.1",
     "ioredis": "^5.11.0",
+    "js-tiktoken": "^1.0.21",
     "mdast-util-to-string": "^4.0.0",
     "reflect-metadata": "^0.2.2",
     "remark-gfm": "^4.0.1",

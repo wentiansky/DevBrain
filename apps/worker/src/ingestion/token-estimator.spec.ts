@@ -1,34 +1,27 @@
-import { tokenEstimator } from './token-estimator';
+import { tokenCounter, tokenCounterMetadata } from './token-estimator';
 
-describe('TokenEstimator', () => {
+describe('tokenCounter', () => {
   it('空文本返回 0', () => {
-    expect(tokenEstimator.estimate('')).toBe(0);
+    expect(tokenCounter.count('')).toBe(0);
   });
 
-  it('纯英文文本估算 token', () => {
-    const text = 'This is a simple English sentence.';
-    const tokens = tokenEstimator.estimate(text);
+  it('中英文混合文本返回稳定 token 数', () => {
+    const text = 'DevBrain 是一个 RAG 知识库系统。Support Markdown and code blocks.';
+    const tokens = tokenCounter.count(text);
     expect(tokens).toBeGreaterThan(0);
-    expect(tokens).toBeLessThan(text.length);
+    expect(tokens).toBe(tokenCounter.count(text));
   });
 
-  it('纯中文文本估算 token', () => {
-    const text = '这是一段中文文本用于测试 token 估算。';
-    const tokens = tokenEstimator.estimate(text);
-    expect(tokens).toBeGreaterThan(0);
-    expect(tokens).toBeLessThanOrEqual(text.length);
+  it('记录 tokenizer metadata 和近似语义', () => {
+    expect(tokenCounterMetadata.tokenCounter).toBe('js-tiktoken/cl100k_base');
+    expect(tokenCounterMetadata.tokenCounterKind).toBe('approximate');
+    expect(tokenCounterMetadata.encoding).toBe('cl100k_base');
   });
 
-  it('混合中英文估算 token', () => {
-    const text = 'DevBrain 是一个 RAG 知识库系统。Support Markdown and more.';
-    const tokens = tokenEstimator.estimate(text);
-    expect(tokens).toBeGreaterThan(0);
-  });
-
-  it('款文本估算 token 数量合理', () => {
-    const longText = 'a'.repeat(1000);
-    const tokens = tokenEstimator.estimate(longText);
-    expect(tokens).toBeLessThan(longText.length);
-    expect(tokens).toBe(250);
+  it('可以截取尾部约 N tokens 文本', () => {
+    const text = '第一句介绍系统。第二句解释检索。第三句说明引用。第四句补充边界。';
+    const tail = tokenCounter.takeTail(text, 12);
+    expect(tail).toContain('第四句');
+    expect(tokenCounter.count(tail)).toBeLessThanOrEqual(12);
   });
 });

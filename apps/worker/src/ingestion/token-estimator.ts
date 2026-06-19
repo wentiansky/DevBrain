@@ -1,28 +1,41 @@
-export class TokenEstimator {
-  estimate(text: string): number {
+import { getEncoding } from 'js-tiktoken';
+
+export interface TokenCounter {
+  count(text: string): number;
+  takeTail(text: string, maxTokens: number): string;
+}
+
+export const tokenCounterMetadata = {
+  tokenCounter: 'js-tiktoken/cl100k_base',
+  tokenCounterKind: 'approximate',
+  encoding: 'cl100k_base',
+  version: '1',
+} as const;
+
+export class TiktokenCounter implements TokenCounter {
+  private readonly encoding = getEncoding('cl100k_base');
+
+  count(text: string): number {
     if (!text) return 0;
+    return this.encoding.encode(text).length;
+  }
 
-    let count = 0;
-    for (let i = 0; i < text.length; i++) {
-      const code = text.charCodeAt(i);
+  takeTail(text: string, maxTokens: number): string {
+    if (!text || maxTokens <= 0) return '';
 
-      if (code <= 0x7f) {
-        count += 0.25;
-      } else if (code <= 0x7ff) {
-        count += 0.5;
-      } else if (code <= 0xffff) {
-        if (code >= 0x4e00 && code <= 0x9fff) {
-          count += 1;
-        } else {
-          count += 0.75;
-        }
-      } else {
-        count += 1;
-      }
+    if (this.count(text) <= maxTokens) return text;
+
+    const chars = Array.from(text);
+    let best = '';
+
+    for (let i = chars.length - 1; i >= 0; i--) {
+      const candidate = `${chars[i]}${best}`;
+      if (this.count(candidate) > maxTokens) break;
+      best = candidate;
     }
 
-    return Math.ceil(count);
+    return best.trim();
   }
 }
 
-export const tokenEstimator = new TokenEstimator();
+export const tokenCounter = new TiktokenCounter();

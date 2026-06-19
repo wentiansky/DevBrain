@@ -4,10 +4,14 @@ export { createDashScopeEmbeddingProvider, EmbeddingProviderError } from './dash
 export type { DashScopeConfig } from './dashscope-embedding.provider';
 export { parseMarkdown } from './markdown-parser';
 export type { MarkdownBlock } from './markdown-parser';
-export { TokenEstimator, tokenEstimator } from './token-estimator';
+export {
+  tokenCounter,
+  tokenCounterMetadata,
+} from './token-estimator';
+export type { TokenCounter } from './token-estimator';
 export { normalizeForHash, computeContentHash, hashPrefix, CONTENT_HASH_VERSION } from './content-hash';
 export { generateAnchor } from './anchor';
-export { splitBlocks } from './splitter';
+export { splitBlocks, DEFAULT_SPLITTER_CONFIG } from './splitter';
 export type { ChunkCandidate, SplitterConfig } from './splitter';
 export { ChunkRepository } from './chunk-repository';
 export type { ChunkInput } from './chunk-repository';

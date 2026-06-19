@@ -90,4 +90,51 @@ describe('splitBlocks', () => {
     const chunks = splitBlocks(blocks);
     expect(chunks.length).toBe(0);
   });
+
+  it('相同标题路径的相邻 chunks 注入 overlap', () => {
+    const blocks = [
+      makeBlock('第一段介绍上传流程和处理状态。', ['Ingestion']),
+      makeBlock('第二段解释解析切块和生成向量。', ['Ingestion']),
+      makeBlock('第三段说明检索召回和引用定位。', ['Ingestion']),
+    ];
+
+    const chunks = splitBlocks(blocks, { targetTokens: 18, overlapTokens: 8 });
+
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks[1].overlapText).toBeTruthy();
+    expect(chunks[1].content).toContain('[上文]');
+    expect(chunks[1].content).toContain('[正文]');
+    expect(chunks[1].overlapTokenCount).toBeGreaterThan(0);
+    expect(chunks[1].overlapTokenCount).toBeLessThanOrEqual(8);
+  });
+
+  it('不同标题路径之间不注入 overlap', () => {
+    const blocks = [
+      makeBlock('第一段介绍认证。第二段继续解释 token。', ['Auth']),
+      makeBlock('第一段介绍检索。第二段继续解释 rerank。', ['Retrieval']),
+    ];
+
+    const chunks = splitBlocks(blocks, { targetTokens: 20, overlapTokens: 5 });
+    const retrievalChunk = chunks.find((chunk) =>
+      chunk.headingPath.includes('Retrieval'),
+    );
+
+    expect(retrievalChunk).toBeDefined();
+    expect(retrievalChunk?.overlapText).toBe('');
+    expect(retrievalChunk?.content).not.toContain('[上文]');
+  });
+
+  it('rawText 只包含当前 chunk 主体正文', () => {
+    const blocks = [
+      makeBlock('第一段保留为上文来源。', ['A']),
+      makeBlock('第二段是当前主体内容。', ['A']),
+    ];
+
+    const chunks = splitBlocks(blocks, { targetTokens: 12, overlapTokens: 12 });
+
+    expect(chunks.length).toBe(2);
+    expect(chunks[1].overlapText).toContain('第一段');
+    expect(chunks[1].rawText).toContain('第二段');
+    expect(chunks[1].rawText).not.toContain('第一段');
+  });
 });

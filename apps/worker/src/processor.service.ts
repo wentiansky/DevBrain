@@ -14,8 +14,10 @@ import {
   generateAnchor,
   ChunkRepository,
   EmbeddingProviderError,
+  tokenCounterMetadata,
+  DEFAULT_SPLITTER_CONFIG,
 } from './ingestion';
-import type { EmbeddingProvider } from './ingestion';
+import type { ChunkCandidate, EmbeddingProvider, SplitterConfig } from './ingestion';
 import { EMBEDDING_PROVIDER } from './constants';
 
 const prisma = getPrismaClient();
@@ -49,6 +51,28 @@ export function validateMarkdownBuffer(buffer: Buffer): string | null {
   }
 
   return null;
+}
+
+export function buildChunkMetadata(
+  candidate: ChunkCandidate,
+  splitterConfig: SplitterConfig = DEFAULT_SPLITTER_CONFIG,
+) {
+  return {
+    rawText: candidate.rawText,
+    overlapText: candidate.overlapText,
+    overlapTokenCount: candidate.overlapTokenCount,
+    startLine: candidate.startLine ?? null,
+    endLine: candidate.endLine ?? null,
+    blockTypes: candidate.blockTypes,
+    ordinal: candidate.ordinal,
+    contentHashVersion: CONTENT_HASH_VERSION,
+    splitterConfig,
+    splitter: {
+      strategy: 'markdown-heading-block-overlap',
+      version: 2,
+    },
+    tokenCounter: tokenCounterMetadata,
+  };
 }
 
 @Injectable()
@@ -105,7 +129,8 @@ export class DocumentProcessorService {
       return;
     }
 
-    const chunkCandidates = splitBlocks(blocks);
+    const splitterConfig = DEFAULT_SPLITTER_CONFIG;
+    const chunkCandidates = splitBlocks(blocks, splitterConfig);
     if (chunkCandidates.length === 0) {
       await this.failDocument(
         payload.documentId,
@@ -160,18 +185,7 @@ export class DocumentProcessorService {
           anchor,
           tokenCount: candidate.tokenCount,
           embedding,
-          metadata: {
-            rawText: candidate.rawText,
-            startLine: candidate.startLine ?? null,
-            endLine: candidate.endLine ?? null,
-            blockTypes: candidate.blockTypes,
-            ordinal: candidate.ordinal,
-            contentHashVersion: CONTENT_HASH_VERSION,
-            splitterConfig: {
-              targetTokens: 500,
-              overlapTokens: 50,
-            },
-          },
+          metadata: buildChunkMetadata(candidate, splitterConfig),
         };
       });
 

@@ -1,5 +1,5 @@
 import { MarkdownBlock } from './markdown-parser';
-import { tokenEstimator } from './token-estimator';
+import { tokenCounter } from './token-estimator';
 
 export interface ChunkCandidate {
   content: string;
@@ -10,6 +10,8 @@ export interface ChunkCandidate {
   tokenCount: number;
   ordinal: number;
   rawText: string;
+  overlapText: string;
+  overlapTokenCount: number;
 }
 
 export interface SplitterConfig {
@@ -17,21 +19,23 @@ export interface SplitterConfig {
   overlapTokens: number;
 }
 
-const DEFAULT_CONFIG: SplitterConfig = {
+export const DEFAULT_SPLITTER_CONFIG: SplitterConfig = {
   targetTokens: 500,
   overlapTokens: 50,
 };
 
 export function splitBlocks(
   blocks: MarkdownBlock[],
-  config: SplitterConfig = DEFAULT_CONFIG,
+  config: SplitterConfig = DEFAULT_SPLITTER_CONFIG,
 ): ChunkCandidate[] {
   if (blocks.length === 0) return [];
 
   const flatBlocks = flattenLongBlocks(blocks, config.targetTokens);
   const chunks = combineBlocks(flatBlocks, config);
 
-  return chunks.filter((c) => c.content.trim().length > 0);
+  return chunks.filter(
+    (c) => c.rawText.trim().length > 0 && c.content.trim().length > 0,
+  );
 }
 
 function flattenLongBlocks(
@@ -41,7 +45,7 @@ function flattenLongBlocks(
   const result: MarkdownBlock[] = [];
 
   for (const block of blocks) {
-    const tokens = tokenEstimator.estimate(block.text);
+    const tokens = tokenCounter.count(block.text);
     if (tokens <= maxTokens) {
       result.push(block);
       continue;
@@ -72,7 +76,7 @@ function splitLongText(
 
   for (const para of paragraphs) {
     const candidate = current ? `${current}\n${para}` : para;
-    if (tokenEstimator.estimate(candidate) > maxTokens && current) {
+    if (tokenCounter.count(candidate) > maxTokens && current) {
       parts.push(current);
       current = para;
     } else {
@@ -81,7 +85,7 @@ function splitLongText(
   }
 
   if (current) {
-    if (tokenEstimator.estimate(current) > maxTokens * 2) {
+    if (tokenCounter.count(current) > maxTokens * 2) {
       const subParts = forceSplitBySentence(current, maxTokens);
       parts.push(...subParts);
     } else {
@@ -100,7 +104,7 @@ function forceSplitBySentence(text: string, maxTokens: number): string[] {
   for (const sentence of sentences) {
     if (!sentence) continue;
     const candidate = current ? `${current}${sentence}` : sentence;
-    if (tokenEstimator.estimate(candidate) > maxTokens && current) {
+    if (tokenCounter.count(candidate) > maxTokens && current) {
       parts.push(current);
       current = sentence;
     } else {
@@ -113,12 +117,14 @@ function forceSplitBySentence(text: string, maxTokens: number): string[] {
 }
 
 function buildChunkContent(
-  blocks: MarkdownBlock[],
   headingPath: string[],
   rawText: string,
+  overlapText: string,
 ): string {
   const prefix = headingPath.length > 0 ? headingPath.join(' > ') + '\n\n' : '';
-  return prefix + rawText;
+  if (!overlapText.trim()) return prefix + rawText;
+
+  return `${prefix}[上文]\n${overlapText}\n\n[正文]\n${rawText}`;
 }
 
 function combineBlocks(
@@ -144,7 +150,7 @@ function combineBlocks(
         break;
       }
 
-      const blockTokens = tokenEstimator.estimate(blocks[j].text);
+      const blockTokens = tokenCounter.count(blocks[j].text);
       if (tokenSum + blockTokens > config.targetTokens && groupBlocks.length > 0) {
         break;
       }
@@ -158,11 +164,18 @@ function combineBlocks(
     }
 
     const headingPath = groupBlocks[0].headingPath;
+    const headingKey = headingPath.join('/');
     const rawText = groupBlocks.map((b) => b.text).join('\n\n');
-    const content = buildChunkContent(groupBlocks, headingPath, rawText);
+    const previousChunk = chunks[chunks.length - 1];
+    const overlapText =
+      previousChunk && previousChunk.headingPath.join('/') === headingKey
+        ? tokenCounter.takeTail(previousChunk.rawText, config.overlapTokens)
+        : '';
+    const overlapTokenCount = tokenCounter.count(overlapText);
+    const content = buildChunkContent(headingPath, rawText, overlapText);
     const startLine = groupBlocks[0].startLine;
     const endLine = groupBlocks[groupBlocks.length - 1].endLine;
-    const tokenCount = tokenEstimator.estimate(content);
+    const tokenCount = tokenCounter.count(content);
 
     chunks.push({
       content,
@@ -173,6 +186,8 @@ function combineBlocks(
       tokenCount,
       ordinal,
       rawText,
+      overlapText,
+      overlapTokenCount,
     });
 
     ordinal++;
